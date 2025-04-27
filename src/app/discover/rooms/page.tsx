@@ -21,7 +21,6 @@ const fakeRooms = [
     price: '$1,050/mo',
     image: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1000&q=80'
   },
-  
   {
     title: '📚 Minimalist Study Space Room',
     desc: 'Room with a modern desk setup and cozy lighting. Ideal for late-night study sessions.',
@@ -33,48 +32,94 @@ const fakeRooms = [
     desc: 'Peaceful room overlooking a quiet garden. Ideal for early risers and plant lovers.',
     price: '$920/mo',
     image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80'
-  },
-  
+  }
 ]
 
 export default function RoomsPage() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {fakeRooms.map((room, i) => (
-        <Card
-          key={i}
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Box
+        sx={{
+          flex: 1,
+          overflowY: 'auto',
+          px: { xs: 2, sm: 4 },
+          py: 6,
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: '#e2e8f0',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: '#cbd5e1',
+            borderRadius: '4px',
+          }
+        }}
+      >
+        <Box
           sx={{
-            backgroundColor: '#222236',
-            borderRadius: 3,
-            boxShadow: '0 0 20px rgba(0,0,0,0.25)',
-            overflow: 'hidden',
-            transition: 'transform 0.3s',
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: '0 0 40px rgba(155, 231, 255, 0.2)'
-            }
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            maxWidth: '800px',
+            margin: '0 auto',
+            width: '100%'
           }}
         >
-          <CardMedia
-            component="img"
-            height="10"
-            image={room.image}
-            alt={room.title}
-            sx={{
-              objectFit: 'cover'
-            }}
-          />
-          <CardContent>
-            <Typography variant="h6" sx={{ color: '#9be7ff', mb: 1 }}>
-              {room.title}
-            </Typography>
-            <Typography sx={{ color: '#cfd8dc', mb: 1 }}>{room.desc}</Typography>
-            <Typography sx={{ color: '#81d4fa', fontWeight: 'bold', fontSize: '1.1rem' }}>
-              {room.price}
-            </Typography>
-          </CardContent>
-        </Card>
-      ))}
+          {fakeRooms.map((room, i) => (
+            <Card
+              key={i}
+              sx={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #cbd5e1',
+                borderRadius: 4,
+                overflow: 'hidden',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                transition: 'transform 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-6px)',
+                  boxShadow: '0 8px 20px rgba(100, 116, 139, 0.2)'
+                },
+                display: 'flex',
+                flexDirection: 'column' // ✅ Force image on top, text below
+              }}
+            >
+              {/* IMAGE ON TOP */}
+              <CardMedia
+                component="img"
+                image={room.image}
+                alt={room.title}
+                sx={{
+                  width: '100%',
+                  height: '500px', // ✅ Small size
+                  objectFit: 'cover'
+                }}
+              />
+
+              {/* TEXT BELOW */}
+              <CardContent>
+                <Typography variant="h6" sx={{ color: '#1e293b', fontWeight: 600, mb: 1 }}>
+                  {room.title}
+                </Typography>
+                <Typography sx={{ color: '#475569', mb: 1 }}>
+                  {room.desc}
+                </Typography>
+                <Typography sx={{ color: '#0ea5e9', fontWeight: 'bold', fontSize: '1.1rem' }}>
+                  {room.price}
+                </Typography>
+              </CardContent>
+            </Card>
+          ))}
+        </Box>
+      </Box>
     </Box>
   )
 }

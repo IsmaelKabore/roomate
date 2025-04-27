@@ -19,7 +19,8 @@ export default function DiscoverSelector({ children }: { children: React.ReactNo
   }, [])
 
   const handleChange = (e: any) => {
-    router.push(e.target.value)
+    const value = e.target.value
+    if (value !== '') router.push(value)
   }
 
   // Prevent SSR mismatch on first render
@@ -29,31 +30,46 @@ export default function DiscoverSelector({ children }: { children: React.ReactNo
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #1a1a2e, #16213e)',
-        color: '#e0e0e0',
+        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)',
+        color: '#1e293b',
         px: 4,
         py: 6
       }}
     >
-      <Typography variant="h4" sx={{ mb: 2, fontWeight: 'bold', color: '#9be7ff' }}>
+      <Typography variant="h4" sx={{ mb: 2, fontWeight: 'bold', color: '#4f46e5' }}>
         Discover
       </Typography>
 
       <Select
-        value={pathname}
+        value={pathname.startsWith('/discover') ? pathname : ''}
         onChange={handleChange}
         variant="outlined"
+        displayEmpty
         sx={{
           mb: 4,
-          backgroundColor: '#2a2a40',
-          color: '#9be7ff',
+          backgroundColor: '#ffffff',
+          color: '#1e293b',
           borderRadius: 2,
-          '.MuiOutlinedInput-notchedOutline': { borderColor: '#81d4fa' },
-          '& .MuiSvgIcon-root': { color: '#9be7ff' }
+          minWidth: 280,
+          '.MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
+          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#6366f1' },
+          '& .MuiSvgIcon-root': { color: '#4f46e5' },
+        }}
+        renderValue={(selected) => {
+          if (!selected) {
+            return <span style={{ color: '#94a3b8' }}>Select...</span>
+          }
+          const selectedOption = discoverOptions.find(opt => opt.value === selected)
+          return selectedOption?.label || 'Select...'
         }}
       >
+        {/* Empty option so "Select..." shows up initially */}
+        <MenuItem value="">
+          <em style={{ color: '#94a3b8' }}>Select...</em>
+        </MenuItem>
+
         {discoverOptions.map((opt) => (
-          <MenuItem key={opt.value} value={opt.value}>
+          <MenuItem key={opt.value} value={opt.value} sx={{ color: '#334155' }}>
             {opt.label}
           </MenuItem>
         ))}

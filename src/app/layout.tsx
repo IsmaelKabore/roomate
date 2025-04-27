@@ -1,7 +1,8 @@
 // app/layout.tsx
 import './globals.css'
-import Header from '@/components/Header'
 import type { Metadata } from 'next'
+import ClientOnly from '@/components/ClientOnly' // ✅ import the client wrapper
+import Header from '@/components/Header'
 
 export const metadata: Metadata = {
   title: 'EAZY',
@@ -11,9 +12,11 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="flex flex-col min-h-screen">
-        <Header /> {/* <- Top nav bar */}
-        <main className="flex-1">{children}</main>
+      <body className="flex flex-col min-h-screen bg-[#f8fafc] text-gray-900"> {/* ✅ Better background */}
+        <ClientOnly>
+          <Header /> {/* Wrapped Header inside ClientOnly */}
+        </ClientOnly>
+        <main className="flex-1 px-4 py-6">{children}</main> {/* Added padding for main content */}
       </body>
     </html>
   )

@@ -1,8 +1,7 @@
 'use client'
 
-import { Box, Card, CardContent, Typography, Chip, Button } from '@mui/material'
+import { Box, Card, CardContent, Typography, Chip, Button, CardMedia } from '@mui/material'
 import ChatIcon from '@mui/icons-material/Chat'
-import Image from 'next/image'
 
 const roommateSeekers = [
   {
@@ -45,40 +44,59 @@ const roommateSeekers = [
 
 export default function RoommatesPage() {
   return (
-    <Box sx={{ display: 'grid', gap: 4, gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)',
+        px: 4,
+        py: 6,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        maxWidth: '800px',
+        margin: '0 auto'
+      }}
+    >
       {roommateSeekers.map((person, i) => (
         <Card
           key={i}
           sx={{
-            backgroundColor: '#222236',
-            border: '1px solid #333',
+            backgroundColor: '#ffffff',
+            border: '1px solid #cbd5e1',
             borderRadius: 4,
             overflow: 'hidden',
-            boxShadow: '0 0 25px rgba(0,0,0,0.25)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
             transition: 'transform 0.3s ease',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
             '&:hover': {
               transform: 'translateY(-6px)',
-              boxShadow: '0 0 40px rgba(155, 231, 255, 0.25)'
-            }
+              boxShadow: '0 8px 20px rgba(100, 116, 139, 0.2)'
+            },
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
-          <Box sx={{ position: 'relative', height: 300 }}>
-            <Image
-              src={person.image}
-              alt={person.name}
-              fill
-              sizes="(max-width: 600px) 100vw, 300px"
-              style={{ objectFit: 'cover' }}
-            />
-          </Box>
-          <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="h6" sx={{ color: '#9be7ff' }}>
+          {/* Image on Top */}
+          <CardMedia
+            component="img"
+            image={person.image}
+            alt={person.name}
+            sx={{
+              width: '100%',
+              height: '500px',
+              objectFit: 'cover'
+            }}
+          />
+
+          {/* Content */}
+          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Typography variant="h6" sx={{ color: '#1e293b', fontWeight: 600 }}>
               {person.name}
             </Typography>
-            <Typography sx={{ color: '#cfd8dc' }}>{person.bio}</Typography>
+
+            <Typography sx={{ color: '#475569', fontSize: '0.9rem' }}>
+              {person.bio}
+            </Typography>
+
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
               {person.interests.map((interest, idx) => (
                 <Chip
@@ -86,8 +104,8 @@ export default function RoommatesPage() {
                   label={interest}
                   size="small"
                   sx={{
-                    backgroundColor: '#2a2a40',
-                    color: '#81d4fa',
+                    backgroundColor: '#e0f2fe',
+                    color: '#0369a1',
                     fontWeight: 500
                   }}
                 />
@@ -101,11 +119,12 @@ export default function RoommatesPage() {
                 size="small"
                 startIcon={<ChatIcon />}
                 sx={{
-                  color: '#81d4fa',
-                  borderColor: '#81d4fa',
+                  color: '#4f46e5',
+                  borderColor: '#4f46e5',
+                  fontWeight: 'bold',
                   '&:hover': {
-                    borderColor: '#9be7ff',
-                    backgroundColor: 'rgba(155, 231, 255, 0.1)'
+                    borderColor: '#6366f1',
+                    backgroundColor: '#eef2ff'
                   }
                 }}
               >

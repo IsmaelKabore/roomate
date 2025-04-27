@@ -18,12 +18,12 @@ export default function DiscoverRootPage() {
         justifyContent: 'center',
         px: 4,
         py: 8,
-        background: 'linear-gradient(to bottom right, #1a1a2e, #16213e)',
-        color: '#e0e0e0'
+        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)', // 🌟 light background!
+        color: '#1e293b', // dark text
       }}
     >
-      <Typography variant="h3" sx={{ mb: 6, fontWeight: 'bold', color: '#9be7ff' }}>
-        Skip the stress-live your best!
+      <Typography variant="h3" sx={{ mb: 6, fontWeight: 'bold', color: '#4f46e5' }}>
+        Discover your next adventure!
       </Typography>
 
       <Box
@@ -32,30 +32,30 @@ export default function DiscoverRootPage() {
           flexDirection: { xs: 'column', md: 'row' },
           gap: 4,
           maxWidth: 900,
-          width: '100%'
+          width: '100%',
         }}
       >
         {/* Discover Rooms Card */}
         <Card
           sx={{
             flex: 1,
-            backgroundColor: '#222236',
-            border: '1px solid #333',
+            backgroundColor: '#ffffff', // white card
+            border: '1px solid #cbd5e1',
             borderRadius: 3,
             '&:hover': {
               transform: 'translateY(-4px)',
-              boxShadow: '0 0 25px rgba(155, 231, 255, 0.25)'
+              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
             },
-            transition: '0.3s ease'
+            transition: '0.3s ease',
           }}
         >
           <CardActionArea onClick={() => router.push('/discover/rooms')}>
             <CardContent sx={{ textAlign: 'center', py: 6 }}>
-              <HomeIcon sx={{ fontSize: 60, color: '#81d4fa', mb: 2 }} />
-              <Typography variant="h5" sx={{ color: '#9be7ff', mb: 1 }}>
+              <HomeIcon sx={{ fontSize: 60, color: '#6366f1', mb: 2 }} />
+              <Typography variant="h5" sx={{ color: '#334155', mb: 1 }}>
                 Explore Rooms
               </Typography>
-              <Typography sx={{ color: '#cfd8dc' }}>
+              <Typography sx={{ color: '#64748b' }}>
                 Browse available listings near campus and find your next room.
               </Typography>
             </CardContent>
@@ -66,23 +66,23 @@ export default function DiscoverRootPage() {
         <Card
           sx={{
             flex: 1,
-            backgroundColor: '#222236',
-            border: '1px solid #333',
+            backgroundColor: '#ffffff',
+            border: '1px solid #cbd5e1',
             borderRadius: 3,
             '&:hover': {
               transform: 'translateY(-4px)',
-              boxShadow: '0 0 25px rgba(155, 231, 255, 0.25)'
+              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
             },
-            transition: '0.3s ease'
+            transition: '0.3s ease',
           }}
         >
           <CardActionArea onClick={() => router.push('/discover/roommates')}>
             <CardContent sx={{ textAlign: 'center', py: 6 }}>
-              <PeopleIcon sx={{ fontSize: 60, color: '#81d4fa', mb: 2 }} />
-              <Typography variant="h5" sx={{ color: '#9be7ff', mb: 1 }}>
+              <PeopleIcon sx={{ fontSize: 60, color: '#6366f1', mb: 2 }} />
+              <Typography variant="h5" sx={{ color: '#334155', mb: 1 }}>
                 Find Roommates
               </Typography>
-              <Typography sx={{ color: '#cfd8dc' }}>
+              <Typography sx={{ color: '#64748b' }}>
                 Find students with similar interests to share your space.
               </Typography>
             </CardContent>

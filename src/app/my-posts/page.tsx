@@ -29,16 +29,8 @@ export default function MyPostsPage() {
   const [posts] = useState(fakePosts)
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #161621, #1c1c2b)',
-        color: '#e0e0e0',
-        px: 4,
-        py: 6
-      }}
-    >
-      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold', color: '#9be7ff' }}>
+    <Box sx={{ minHeight: '100vh', backgroundColor: '#ffffff', color: '#171717', px: 4, py: 6 }}>
+      <Typography variant="h4" sx={{ mb: 4, fontWeight: 'bold', color: '#0f172a' }}>
         My Posts
       </Typography>
 
@@ -47,12 +39,12 @@ export default function MyPostsPage() {
           variant="outlined"
           sx={{
             mb: 4,
-            color: '#9be7ff',
-            borderColor: '#9be7ff',
+            color: '#0f172a',
+            borderColor: '#0f172a',
             fontWeight: 500,
             '&:hover': {
-              backgroundColor: 'rgba(155, 231, 255, 0.1)',
-              borderColor: '#81d4fa'
+              backgroundColor: '#e0f2fe',
+              borderColor: '#0ea5e9'
             }
           }}
         >
@@ -71,15 +63,15 @@ export default function MyPostsPage() {
           <Card
             key={idx}
             sx={{
-              backgroundColor: '#222236',
-              border: '1px solid #333',
-              borderRadius: 4,
+              backgroundColor: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 3,
               overflow: 'hidden',
-              boxShadow: '0 0 20px rgba(0,0,0,0.2)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
               transition: 'transform 0.3s ease',
               '&:hover': {
-                transform: 'translateY(-4px)',
-                boxShadow: '0 0 30px rgba(155, 231, 255, 0.25)'
+                transform: 'translateY(-5px)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.1)'
               }
             }}
           >
@@ -93,11 +85,11 @@ export default function MyPostsPage() {
               />
             )}
             <CardContent>
-              <Typography variant="h6" sx={{ color: '#9be7ff', mb: 1 }}>
+              <Typography variant="h6" sx={{ color: '#0ea5e9', mb: 1 }}>
                 {post.title}
               </Typography>
-              <Typography sx={{ mb: 1 }}>{post.desc}</Typography>
-              <Typography sx={{ color: '#81d4fa', fontWeight: 500 }}>{post.price}</Typography>
+              <Typography sx={{ mb: 1, color: '#334155' }}>{post.desc}</Typography>
+              <Typography sx={{ color: '#0f172a', fontWeight: 600 }}>{post.price}</Typography>
             </CardContent>
           </Card>
         ))}

@@ -1,135 +1,217 @@
 'use client'
 
-import { Box, Typography } from '@mui/material'
-
-const fakeProfile = {
-  name: 'Alice Johnson',
-  age: 22,
-  profilePicture: 'https://randomuser.me/api/portraits/women/68.jpg',
-  bio: 'I’m a CS major who codes by day and doodles by night. Always down for a boba walk or spontaneous jam session.',
-  funFact: 'I’ve been to 14 countries and once danced with a robot in Japan.',
-  phone: '(510) 456-7890',
-  likes: 'Cooking, Lo-fi playlists, group projects, clean kitchen, Sunday hikes 🌲',
-  roommatePreferences: 'Prefer someone tidy, doesn’t bring the party home, and is down to co-work in silence ✌️',
-  personalityTraits: ['Creative', 'Empathetic', 'Ambitious'],
-  lifestyleTraits: ['Organized', 'Health-conscious', 'Laid-back'],
-  habitTraits: ['Punctual', 'Planner', 'Focused']
-}
+import { useEffect, useRef, useState } from 'react'
+import FloatingMessageButton from '@/components/FloatingMessageButton' // ✅ Floating Inbox button
 
 const traitIcons: Record<string, string> = {
-  Creative: '🎨',
-  Empathetic: '💗',
-  Ambitious: '🏆',
-  Organized: '📋',
-  'Health-conscious': '🥗',
-  'Laid-back': '🌴',
-  Punctual: '⏰',
-  Planner: '📅',
-  Focused: '🎯'
+  Creative: '🎨', Optimistic: '😊', 'Detail-oriented': '🔍', Adventurous: '🚀',
+  Analytical: '🧠', Empathetic: '💗', Ambitious: '🏆', Introverted: '🤔',
+  Charismatic: '✨', Confident: '💪', Active: '🏃‍♂️', Minimalist: '⚪',
+  Social: '👥', 'Health-conscious': '🥗', Organized: '📋', Spontaneous: '🎭',
+  Workaholic: '💼', 'Laid-back': '🌴', Punctual: '⏰', Disciplined: '📝',
+  Focused: '🎯', Procrastinator: '⏳', Planner: '📅', Reliable: '🤝'
 }
 
-export default function ProfilePage() {
-  const profile = fakeProfile
+const allTraits = Object.keys(traitIcons)
+
+export default function Profile() {
+  const [profile, setProfile] = useState({
+    name: '',
+    bio: '',
+    phone: '',
+    likes: '',
+    profilePicture: '',
+    traits: [] as string[]
+  })
+  const [editing, setEditing] = useState(false)
+  const fileRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    const saved = localStorage.getItem('homigo_profile')
+    if (saved) setProfile(JSON.parse(saved))
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('homigo_profile', JSON.stringify(profile))
+  }, [profile])
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setProfile((prev) => ({ ...prev, profilePicture: reader.result as string }))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const toggleTrait = (trait: string) => {
+    setProfile((prev) => ({
+      ...prev,
+      traits: prev.traits.includes(trait)
+        ? prev.traits.filter((t) => t !== trait)
+        : prev.traits.length < 6
+        ? [...prev.traits, trait]
+        : prev.traits
+    }))
+  }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #1a1a2e, #16213e)',
-        color: '#e0e0e0',
-        px: 4,
-        py: 6,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 4
-      }}
-    >
-      {/* Heading */}
-      <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#9be7ff' }}>
-        👤 My EazyRoom Profile
-      </Typography>
+    <div className="max-w-3xl mx-auto py-10 px-6 bg-white text-gray-900 relative">
+      <h1 className="text-4xl font-bold text-center text-blue-700 mb-8">My Profile</h1>
 
-      {/* Profile Header */}
-      <div className="flex flex-col md:flex-row items-center gap-6 bg-white/10 p-6 rounded-2xl shadow-lg">
-        <img
-          src={profile.profilePicture}
-          alt="Profile"
-          className="w-32 h-32 rounded-full object-cover border-4 border-indigo-300 shadow-lg"
-        />
-        <div className="text-center md:text-left space-y-2">
-          <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
-          <p className="text-indigo-300">{profile.phone}</p>
-          <p className="text-indigo-100">{profile.bio}</p>
-        </div>
-      </div>
+      {!editing ? (
+        <div className="space-y-6">
+          {/* Profile Header */}
+          <div className="flex items-center gap-6">
+            <div className="w-28 h-28 rounded-full bg-gray-200 overflow-hidden border-4 border-blue-300">
+              {profile.profilePicture ? (
+                <img src={profile.profilePicture} alt="profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-4xl text-gray-600">
+                  {profile.name?.charAt(0) || '?'}
+                </div>
+              )}
+            </div>
+            <div>
+              <h2 className="text-2xl font-semibold">{profile.name || 'Your Name'}</h2>
+              <p className="text-gray-500">{profile.phone || 'No phone set'}</p>
+              <p className="text-gray-500 mt-1">{profile.bio || 'No bio yet.'}</p>
+            </div>
+          </div>
 
-      {/* Likes */}
-      <div className="bg-white/10 rounded-2xl p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-blue-300 mb-2">💙 What I Like</h3>
-        <p className="text-indigo-100">{profile.likes}</p>
-      </div>
+          {/* Likes Section */}
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-600 mb-2">What I Like</h3>
+            <p className="text-gray-700">{profile.likes || 'No likes listed yet.'}</p>
+          </div>
 
-      {/* Fun Fact */}
-      <div className="bg-white/10 rounded-2xl p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-pink-300 mb-2">🎉 Fun Fact</h3>
-        <p className="text-pink-100">{profile.funFact}</p>
-      </div>
+          {/* Traits Section */}
+          <div className="bg-gray-100 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-600 mb-2">Traits</h3>
+            <div className="flex flex-wrap gap-2">
+              {profile.traits.length ? (
+                profile.traits.map((t) => (
+                  <span
+                    key={t}
+                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"
+                  >
+                    {traitIcons[t]} {t}
+                  </span>
+                ))
+              ) : (
+                <p className="text-gray-400 italic">No traits selected.</p>
+              )}
+            </div>
+          </div>
 
-      {/* Preferences */}
-      <div className="bg-white/10 rounded-2xl p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-green-300 mb-2">🛋️ Roommate Preferences</h3>
-        <p className="text-green-100">{profile.roommatePreferences}</p>
-      </div>
-
-      {/* Traits Section */}
-      <div className="bg-white/10 rounded-2xl p-6 shadow-md">
-        <h3 className="text-lg font-semibold text-yellow-300 mb-4">🧠 My Traits</h3>
-
-        {/* Personality */}
-        <div className="mb-3">
-          <h4 className="text-md font-medium text-indigo-300 mb-2">Personality</h4>
-          <div className="flex flex-wrap gap-2">
-            {profile.personalityTraits.map((trait) => (
-              <span
-                key={trait}
-                className="px-3 py-1 bg-indigo-500 text-white rounded-full text-sm flex items-center gap-1"
-              >
-                {traitIcons[trait]} {trait}
-              </span>
-            ))}
+          <div className="text-center">
+            <button
+              onClick={() => setEditing(true)}
+              className="bg-blue-600 hover:bg-blue-500 px-5 py-2 rounded-lg text-white font-medium"
+            >
+              Edit Profile
+            </button>
           </div>
         </div>
-
-        {/* Lifestyle */}
-        <div className="mb-3">
-          <h4 className="text-md font-medium text-green-300 mb-2">Lifestyle</h4>
-          <div className="flex flex-wrap gap-2">
-            {profile.lifestyleTraits.map((trait) => (
-              <span
-                key={trait}
-                className="px-3 py-1 bg-green-500 text-white rounded-full text-sm flex items-center gap-1"
-              >
-                {traitIcons[trait]} {trait}
-              </span>
-            ))}
+      ) : (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            setEditing(false)
+          }}
+        >
+          {/* Upload */}
+          <div className="text-center">
+            <input
+              type="file"
+              ref={fileRef}
+              onChange={handleImageUpload}
+              accept="image/*"
+              hidden
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg shadow"
+            >
+              Upload Profile Picture
+            </button>
           </div>
-        </div>
 
-        {/* Habits */}
-        <div>
-          <h4 className="text-md font-medium text-pink-300 mb-2">Habits</h4>
-          <div className="flex flex-wrap gap-2">
-            {profile.habitTraits.map((trait) => (
-              <span
-                key={trait}
-                className="px-3 py-1 bg-pink-500 text-white rounded-full text-sm flex items-center gap-1"
-              >
-                {traitIcons[trait]} {trait}
-              </span>
-            ))}
+          {/* Form Fields */}
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={profile.name}
+            onChange={(e) => setProfile({ ...profile, name: e.target.value })}
+            className="w-full p-3 rounded bg-gray-100 border border-gray-300 focus:outline-none"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Phone"
+            value={profile.phone}
+            onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+            className="w-full p-3 rounded bg-gray-100 border border-gray-300 focus:outline-none"
+          />
+          <textarea
+            placeholder="Bio"
+            value={profile.bio}
+            onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+            rows={3}
+            className="w-full p-3 rounded bg-gray-100 border border-gray-300 focus:outline-none"
+          />
+          <input
+            type="text"
+            placeholder="What I Like"
+            value={profile.likes}
+            onChange={(e) => setProfile({ ...profile, likes: e.target.value })}
+            className="w-full p-3 rounded bg-gray-100 border border-gray-300 focus:outline-none"
+          />
+
+          {/* Traits */}
+          <div>
+            <h4 className="text-md font-semibold text-blue-600 mb-2">Select Traits (Max 6)</h4>
+            <div className="flex flex-wrap gap-2">
+              {allTraits.map((trait) => (
+                <button
+                  key={trait}
+                  type="button"
+                  className={`px-3 py-1 rounded-full text-sm ${
+                    profile.traits.includes(trait)
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  onClick={() => toggleTrait(trait)}
+                >
+                  {traitIcons[trait]} {trait}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      </div>
-    </Box>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg"
+            >
+              Save Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="flex-1 py-2 bg-gray-500 hover:bg-gray-400 text-white rounded-lg"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Floating Messages Button */}
+      <FloatingMessageButton />
+    </div>
   )
 }

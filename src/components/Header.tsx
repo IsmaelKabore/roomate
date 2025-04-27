@@ -8,7 +8,8 @@ const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Discover', href: '/discover' },
   { label: 'My Posts', href: '/my-posts' },
-  { label: 'Profile', href: '/profile' }
+  { label: 'Profile', href: '/profile' },
+  { label: 'Inbox', href: '/messages' },
 ]
 
 export default function Header() {
@@ -16,42 +17,39 @@ export default function Header() {
     <AppBar
       position="sticky"
       sx={{
-        background: 'linear-gradient(to right, #0f172a, #1e293b)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
+        backgroundColor: '#ffffff',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        paddingY: 1,
+        zIndex: 1000,
       }}
     >
       <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
-        {/* Left: Logo */}
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/logo.png"
-            alt="Homigo Logo"
-            width={40}
-            height={40}
+            alt="Eazy Logo"
+            width={70}
+            height={70}
             priority
             style={{ borderRadius: '8px' }}
           />
-          <span className="text-white font-semibold text-lg hidden sm:inline">Homigo</span>
+         
         </Link>
 
-        {/* Right: Navigation */}
+        {/* Navigation */}
         <Box sx={{ display: 'flex', gap: 2 }}>
           {navItems.map(({ label, href }) => (
             <Link key={href} href={href}>
               <Button
-                color="inherit"
                 sx={{
-                  textTransform: 'uppercase',
-                  fontWeight: 'medium',
-                  fontSize: '0.9rem',
-                  letterSpacing: 1.2,
-                  borderRadius: 2,
-                  px: 2,
-                  py: 1,
+                  color: '#2563eb',
+                  fontWeight: '600',
+                  textTransform: 'none',
+                  fontSize: '1rem',
                   '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    transform: 'scale(1.05)'
-                  }
+                    backgroundColor: '#e0f2fe',
+                  },
                 }}
               >
                 {label}
