@@ -1,48 +1,178 @@
+// File: src/app/discover/roommates/page.tsx
 'use client'
 
-import { Box, Card, CardContent, Typography, Chip, Button, CardMedia } from '@mui/material'
-import ChatIcon from '@mui/icons-material/Chat'
+import { useEffect, useState } from 'react'
+import {
+  Box,
+  Card,
+  CardHeader,
+  Avatar,
+  CardContent,
+  Typography,
+  Button,
+  CircularProgress,
+  Pagination,
+} from '@mui/material'
+import { ArrowBackIos, ArrowForwardIos, Chat as ChatIcon } from '@mui/icons-material'
+import { useRouter } from 'next/navigation'
+import { getRoommatePosts } from '@/lib/firestorePosts'
+import { fetchUserProfile } from '@/lib/firestoreProfile'
+import { auth } from '@/lib/firebaseConfig'
+import { createRoom } from '@/lib/firestoreMessages'
+import type { Timestamp } from 'firebase/firestore'
 
-const roommateSeekers = [
-  {
-    name: 'Amina',
-    bio: 'CS major, early bird, loves quiet evenings and organizing her space.',
-    image: 'https://randomuser.me/api/portraits/women/68.jpg',
-    interests: ['Journaling', 'Matcha', 'Clean roommates']
-  },
-  {
-    name: 'Tariq',
-    bio: 'Econ transfer student. Big on soccer, meal prepping, and late-night debates.',
-    image: 'https://randomuser.me/api/portraits/men/75.jpg',
-    interests: ['Cooking', 'Football', 'Quiet study sessions']
-  },
-  {
-    name: 'Jasmine',
-    bio: 'Architecture student. Always down to talk design or water her 10 plants.',
-    image: 'https://randomuser.me/api/portraits/women/12.jpg',
-    interests: ['Interior design', 'Painting', 'Plants']
-  },
-  {
-    name: 'Luis',
-    bio: 'Engineering major, gamer, and low-key chef. Clean but not silent.',
-    image: 'https://randomuser.me/api/portraits/men/24.jpg',
-    interests: ['Gaming', 'Cooking', 'Late-night snacks']
-  },
-  {
-    name: 'Mei',
-    bio: 'Business major who values aesthetics, routine, and respectful roomies.',
-    image: 'https://randomuser.me/api/portraits/women/40.jpg',
-    interests: ['Skincare', 'Modern apartments', 'Cafés']
-  },
-  {
-    name: 'Jonas',
-    bio: 'Data Science nerd. Obsessed with cold brew and Figma.',
-    image: 'https://randomuser.me/api/portraits/men/10.jpg',
-    interests: ['Coding', 'Cold brew', 'Figma']
+type RoommatePost = {
+  id: string
+  userId: string
+  title: string
+  description: string
+  images: string[]
+  createdAt: Timestamp
+  profile?: {
+    name?: string
+    profilePicture?: string
+    traits?: string[]
   }
-]
+}
+
+function Carousel({ images }: { images: string[] }) {
+  const [current, setCurrent] = useState(0)
+  const prev = () => setCurrent((c) => (c - 1 + images.length) % images.length)
+  const next = () => setCurrent((c) => (c + 1) % images.length)
+
+  if (!images || images.length === 0) {
+    return (
+      <Box
+        sx={{
+          height: 300,
+          backgroundColor: '#e0e0e0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Typography>No Image</Typography>
+      </Box>
+    )
+  }
+
+  return (
+    <Box sx={{ position: 'relative', height: 300, overflow: 'hidden' }}>
+      <Box
+        component="img"
+        src={images[current]}
+        alt={`carousel-${current}`}
+        sx={{
+          width: '100%',
+          height: 300,
+          objectFit: 'cover',
+        }}
+      />
+      {images.length > 1 && (
+        <>
+          <Button
+            onClick={prev}
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: 8,
+              transform: 'translateY(-50%)',
+              backgroundColor: 'rgba(255,255,255,0.7)',
+              minWidth: '32px',
+              p: 0.5,
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
+            }}
+            size="small"
+          >
+            <ArrowBackIos fontSize="small" />
+          </Button>
+          <Button
+            onClick={next}
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              right: 8,
+              transform: 'translateY(-50%)',
+              backgroundColor: 'rgba(255,255,255,0.7)',
+              minWidth: '32px',
+              p: 0.5,
+              '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
+            }}
+            size="small"
+          >
+            <ArrowForwardIos fontSize="small" />
+          </Button>
+        </>
+      )}
+    </Box>
+  )
+}
 
 export default function RoommatesPage() {
+  const [posts, setPosts] = useState<RoommatePost[]>([])
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const itemsPerPage = 5
+  const router = useRouter()
+
+  useEffect(() => {
+    ;(async () => {
+      const raw: RoommatePost[] = await getRoommatePosts()
+      const enriched = await Promise.all(
+        raw.map(async (p) => {
+          let profileData: undefined | {
+            name?: string
+            profilePicture?: string
+            traits?: string[]
+          } = undefined
+
+          try {
+            profileData = await fetchUserProfile(p.userId)
+          } catch {
+            // ignore if no profile
+          }
+
+          return { ...p, profile: profileData }
+        })
+      )
+
+      // Sort by createdAt descending so newest appear first
+      enriched.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+      setPosts(enriched)
+      setLoading(false)
+    })()
+  }, [])
+
+  const handleChat = (post: RoommatePost) => {
+    const user = auth.currentUser
+    if (!user) {
+      alert('You must be logged in to chat.')
+      return
+    }
+    const roomId = [user.uid, post.userId].sort().join('_')
+    createRoom(roomId, [user.uid, post.userId]).then(() => {
+      router.push(`/messages/${roomId}`)
+    })
+  }
+
+  if (loading) {
+    return (
+      <Box sx={{ textAlign: 'center', mt: 6 }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
+
+  // Calculate pagination
+  const totalPages = Math.ceil(posts.length / itemsPerPage)
+  const startIdx = (page - 1) * itemsPerPage
+  const paginatedPosts = posts.slice(startIdx, startIdx + itemsPerPage)
+
+  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <Box
       sx={{
@@ -54,86 +184,114 @@ export default function RoommatesPage() {
         flexDirection: 'column',
         gap: 4,
         maxWidth: '800px',
-        margin: '0 auto'
+        mx: 'auto',
       }}
     >
-      {roommateSeekers.map((person, i) => (
-        <Card
-          key={i}
-          sx={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
-            borderRadius: 4,
-            overflow: 'hidden',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-            transition: 'transform 0.3s ease',
-            '&:hover': {
-              transform: 'translateY(-6px)',
-              boxShadow: '0 8px 20px rgba(100, 116, 139, 0.2)'
-            },
-            display: 'flex',
-            flexDirection: 'column'
-          }}
-        >
-          {/* Image on Top */}
-          <CardMedia
-            component="img"
-            image={person.image}
-            alt={person.name}
-            sx={{
-              width: '100%',
-              height: '500px',
-              objectFit: 'cover'
-            }}
-          />
+      {posts.length === 0 ? (
+        <Typography>No roommate posts found.</Typography>
+      ) : (
+        <>
+          {paginatedPosts.map((person) => (
+            <Card
+              key={person.id}
+              sx={{
+                backgroundColor: '#fff',
+                border: '1px solid #cbd5e1',
+                borderRadius: 4,
+                overflow: 'hidden',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                transition: 'transform 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-6px)',
+                  boxShadow: '0 8px 20px rgba(100,116,139,0.2)',
+                },
+              }}
+            >
+              <CardHeader
+                avatar={
+                  <Avatar
+                    src={person.profile?.profilePicture}
+                    alt={person.profile?.name || 'User'}
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => {
+                      if (!auth.currentUser) {
+                        alert('You must be logged in to view profiles.')
+                      } else {
+                        router.push(`/profile/${person.userId}`)
+                      }
+                    }}
+                  />
+                }
+                title={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography
+                      variant="subtitle1"
+                      sx={{ cursor: 'pointer', fontWeight: 600 }}
+                      onClick={() => {
+                        if (!auth.currentUser) {
+                          alert('You must be logged in to view profiles.')
+                        } else {
+                          router.push(`/profile/${person.userId}`)
+                        }
+                      }}
+                    >
+                      {person.profile?.name || 'Unknown User'}
+                    </Typography>
+                    {auth.currentUser && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => router.push(`/profile/${person.userId}`)}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        View Profile
+                      </Button>
+                    )}
+                  </Box>
+                }
+                subheader={(person.profile?.traits || []).slice(0, 2).join(', ')}
+              />
 
-          {/* Content */}
-          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Typography variant="h6" sx={{ color: '#1e293b', fontWeight: 600 }}>
-              {person.name}
-            </Typography>
+              <Carousel images={person.images} />
 
-            <Typography sx={{ color: '#475569', fontSize: '0.9rem' }}>
-              {person.bio}
-            </Typography>
+              <CardContent>
+                <Typography sx={{ fontSize: '0.9rem' }}>{person.description}</Typography>
+                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<ChatIcon />}
+                    onClick={() => handleChat(person)}
+                    sx={{
+                      color: '#4f46e5',
+                      borderColor: '#4f46e5',
+                      fontWeight: 'bold',
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderColor: '#6366f1',
+                        backgroundColor: '#eef2ff',
+                      },
+                    }}
+                  >
+                    Contact
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          ))}
 
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-              {person.interests.map((interest, idx) => (
-                <Chip
-                  key={idx}
-                  label={interest}
-                  size="small"
-                  sx={{
-                    backgroundColor: '#e0f2fe',
-                    color: '#0369a1',
-                    fontWeight: 500
-                  }}
-                />
-              ))}
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+              />
             </Box>
-
-            {/* Chat Button */}
-            <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<ChatIcon />}
-                sx={{
-                  color: '#4f46e5',
-                  borderColor: '#4f46e5',
-                  fontWeight: 'bold',
-                  '&:hover': {
-                    borderColor: '#6366f1',
-                    backgroundColor: '#eef2ff'
-                  }
-                }}
-              >
-                Chat
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
-      ))}
+          )}
+        </>
+      )}
     </Box>
   )
 }

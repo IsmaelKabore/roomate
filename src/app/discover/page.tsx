@@ -1,12 +1,39 @@
 'use client'
 
-import { Box, Typography, Card, CardActionArea, CardContent } from '@mui/material'
+import React, { useEffect, useState } from 'react'
+import {
+  Box,
+  Typography,
+  Card,
+  CardActionArea,
+  CardContent,
+  Button,
+} from '@mui/material'
 import { useRouter } from 'next/navigation'
 import HomeIcon from '@mui/icons-material/MeetingRoom'
 import PeopleIcon from '@mui/icons-material/Group'
+import AssignmentIcon from '@mui/icons-material/Assignment'
+import { auth } from '@/lib/firebaseConfig'
 
 export default function DiscoverRootPage() {
   const router = useRouter()
+  const [checkingAuth, setCheckingAuth] = useState(true)
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      // We don't need to fetch profile anymore, so just stop loading
+      setCheckingAuth(false)
+    })
+    return () => unsubscribe()
+  }, [])
+
+  if (checkingAuth) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Typography>Loading…</Typography>
+      </Box>
+    )
+  }
 
   return (
     <Box
@@ -15,15 +42,53 @@ export default function DiscoverRootPage() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
+        pt: 6,
         px: 4,
-        py: 8,
-        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)', // 🌟 light background!
-        color: '#1e293b', // dark text
+        background: 'linear-gradient(to bottom right, #ffffff, #EFF6FF)',
+        color: '#1e293b',
       }}
     >
-      <Typography variant="h3" sx={{ mb: 6, fontWeight: 'bold', color: '#4f46e5' }}>
-        Discover your next adventure!
+      <Typography
+        variant="h4"
+        sx={{ mb: 2, color: '#1E40AF', fontWeight: 700, textAlign: 'center' }}
+      >
+        Welcome to Discover
+      </Typography>
+
+      {/* “See My Matches” at top */}
+      <Button
+        variant="contained"
+        onClick={() => {
+          if (!auth.currentUser) {
+            // If not logged in, send to login (which then goes to /discover on success)
+            router.push('/auth/login')
+          } else {
+            // Otherwise, just go to /matches
+            router.push('/matches')
+          }
+        }}
+        sx={{
+          mb: 4,
+          background: '#3B82F6',
+          color: '#fff',
+          '&:hover': { background: '#2563EB' },
+        }}
+      >
+        See My Matches
+      </Button>
+
+      <Typography
+        variant="subtitle1"
+        sx={{
+          mb: 6,
+          color: '#475569',
+          textAlign: 'center',
+          maxWidth: 640,
+          lineHeight: 1.5,
+        }}
+      >
+        Find your next home or connect with like‐minded roommates—powered by a sleek,
+        futuristic interface that feels right at home with Berkeley’s vibrant community.
       </Typography>
 
       <Box
@@ -31,59 +96,232 @@ export default function DiscoverRootPage() {
           display: 'flex',
           flexDirection: { xs: 'column', md: 'row' },
           gap: 4,
-          maxWidth: 900,
+          maxWidth: 960,
           width: '100%',
         }}
       >
-        {/* Discover Rooms Card */}
+        {/* Explore Rooms */}
         <Card
           sx={{
             flex: 1,
-            backgroundColor: '#ffffff', // white card
-            border: '1px solid #cbd5e1',
+            bgcolor: '#ffffff',
             borderRadius: 3,
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0px 4px 16px rgba(59, 130, 246, 0.1)',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            position: 'relative',
+            overflow: 'hidden',
+            '&:before': {
+              content: '""',
+              position: 'absolute',
+              top: -50,
+              right: -50,
+              width: 150,
+              height: 150,
+              bgcolor: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '50%',
+              transition: 'all 0.3s ease',
             },
-            transition: '0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-8px)',
+              boxShadow: '0px 8px 32px rgba(59, 130, 246, 0.2)',
+            },
+            '&:hover:before': {
+              top: -80,
+              right: -80,
+              width: 200,
+              height: 200,
+              bgcolor: 'rgba(59, 130, 246, 0.15)',
+            },
           }}
         >
           <CardActionArea onClick={() => router.push('/discover/rooms')}>
-            <CardContent sx={{ textAlign: 'center', py: 6 }}>
-              <HomeIcon sx={{ fontSize: 60, color: '#6366f1', mb: 2 }} />
-              <Typography variant="h5" sx={{ color: '#334155', mb: 1 }}>
+            <CardContent sx={{ textAlign: 'center', py: 8, position: 'relative', zIndex: 1 }}>
+              <HomeIcon
+                sx={{
+                  fontSize: 64,
+                  color: '#3B82F6',
+                  mb: 2,
+                  filter: 'drop-shadow(0 0 5px rgba(59,130,246,0.6))',
+                }}
+              />
+              <Typography variant="h5" sx={{ color: '#1E40AF', fontWeight: 700, mb: 1 }}>
                 Explore Rooms
               </Typography>
-              <Typography sx={{ color: '#64748b' }}>
-                Browse available listings near campus and find your next room.
+              <Typography sx={{ color: '#475569', px: 2, mb: 2, lineHeight: 1.4 }}>
+                Browse trusted listings around Berkeley—​butter-smooth VR tours, real-time filters,
+                and immersive neighborhood previews to help you choose your perfect space.
+              </Typography>
+              <Typography
+                sx={{
+                  display: 'inline-block',
+                  mt: 2,
+                  px: 3,
+                  py: 1,
+                  bgcolor: '#3B82F6',
+                  color: '#ffffff',
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  transition: 'background 0.3s ease',
+                  '&:hover': {
+                    bgcolor: '#2563EB',
+                  },
+                }}
+              >
+                View Listings
               </Typography>
             </CardContent>
           </CardActionArea>
         </Card>
 
-        {/* Discover Roommates Card */}
+        {/* Find Roommates */}
         <Card
           sx={{
             flex: 1,
-            backgroundColor: '#ffffff',
-            border: '1px solid #cbd5e1',
+            bgcolor: '#ffffff',
             borderRadius: 3,
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: '0 6px 20px rgba(0, 0, 0, 0.1)',
+            boxShadow: '0px 4px 16px rgba(59, 130, 246, 0.1)',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            position: 'relative',
+            overflow: 'hidden',
+            '&:before': {
+              content: '""',
+              position: 'absolute',
+              bottom: -50,
+              left: -50,
+              width: 150,
+              height: 150,
+              bgcolor: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '50%',
+              transition: 'all 0.3s ease',
             },
-            transition: '0.3s ease',
+            '&:hover': {
+              transform: 'translateY(-8px)',
+              boxShadow: '0px 8px 32px rgba(59, 130, 246, 0.2)',
+            },
+            '&:hover:before': {
+              bottom: -80,
+              left: -80,
+              width: 200,
+              height: 200,
+              bgcolor: 'rgba(59, 130, 246, 0.15)',
+            },
           }}
         >
           <CardActionArea onClick={() => router.push('/discover/roommates')}>
-            <CardContent sx={{ textAlign: 'center', py: 6 }}>
-              <PeopleIcon sx={{ fontSize: 60, color: '#6366f1', mb: 2 }} />
-              <Typography variant="h5" sx={{ color: '#334155', mb: 1 }}>
+            <CardContent sx={{ textAlign: 'center', py: 8, position: 'relative', zIndex: 1 }}>
+              <PeopleIcon
+                sx={{
+                  fontSize: 64,
+                  color: '#3B82F6',
+                  mb: 2,
+                  filter: 'drop-shadow(0 0 5px rgba(59,130,246,0.6))',
+                }}
+              />
+              <Typography variant="h5" sx={{ color: '#1E40AF', fontWeight: 700, mb: 1 }}>
                 Find Roommates
               </Typography>
-              <Typography sx={{ color: '#64748b' }}>
-                Find students with similar interests to share your space.
+              <Typography sx={{ color: '#475569', px: 2, mb: 2, lineHeight: 1.4 }}>
+                Build your profile, set lifestyle preferences, and match with compatible
+                roommates—chat instantly to find the perfect living partner in Berkeley.
+              </Typography>
+              <Typography
+                sx={{
+                  display: 'inline-block',
+                  mt: 2,
+                  px: 3,
+                  py: 1,
+                  bgcolor: '#3B82F6',
+                  color: '#ffffff',
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  transition: 'background 0.3s ease',
+                  '&:hover': {
+                    bgcolor: '#2563EB',
+                  },
+                }}
+              >
+                Meet Roommates
+              </Typography>
+            </CardContent>
+          </CardActionArea>
+        </Card>
+
+        {/* Matching */}
+        <Card
+          sx={{
+            flex: 1,
+            bgcolor: '#ffffff',
+            borderRadius: 3,
+            boxShadow: '0px 4px 16px rgba(59, 130, 246, 0.1)',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            position: 'relative',
+            overflow: 'hidden',
+            '&:before': {
+              content: '""',
+              position: 'absolute',
+              top: -50,
+              left: -50,
+              width: 150,
+              height: 150,
+              bgcolor: 'rgba(59, 130, 246, 0.1)',
+              borderRadius: '50%',
+              transition: 'all 0.3s ease',
+            },
+            '&:hover': {
+              transform: 'translateY(-8px)',
+              boxShadow: '0px 8px 32px rgba(59, 130, 246, 0.2)',
+            },
+            '&:hover:before': {
+              top: -80,
+              left: -80,
+              width: 200,
+              height: 200,
+              bgcolor: 'rgba(59, 130, 246, 0.15)',
+            },
+          }}
+        >
+          <CardActionArea
+            onClick={() => {
+              if (!auth.currentUser) {
+                router.push('/auth/login')
+              } else {
+                router.push('/matches')
+              }
+            }}
+          >
+            <CardContent sx={{ textAlign: 'center', py: 8, position: 'relative', zIndex: 1 }}>
+              <AssignmentIcon
+                sx={{
+                  fontSize: 64,
+                  color: '#3B82F6',
+                  mb: 2,
+                  filter: 'drop-shadow(0 0 5px rgba(59,130,246,0.6))',
+                }}
+              />
+              <Typography variant="h5" sx={{ color: '#1E40AF', fontWeight: 700, mb: 1 }}>
+                Matching
+              </Typography>
+              <Typography sx={{ color: '#475569', px: 2, mb: 2, lineHeight: 1.4 }}>
+                Enter a few keywords or let our AI find your top 5 matches—quickly discover the
+                best room or roommate options tailored to you.
+              </Typography>
+              <Typography
+                sx={{
+                  display: 'inline-block',
+                  mt: 2,
+                  px: 3,
+                  py: 1,
+                  bgcolor: '#3B82F6',
+                  color: '#ffffff',
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  transition: 'background 0.3s ease',
+                  '&:hover': {
+                    bgcolor: '#2563EB',
+                  },
+                }}
+              >
+                View Matches
               </Typography>
             </CardContent>
           </CardActionArea>
