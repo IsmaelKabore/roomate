@@ -35,7 +35,8 @@ interface UserProfileData {
 }
 
 export default function PublicProfilePage() {
-  const { userId } = useParams<{ userId: string }>()
+  const params = useParams<{ userId: string }>()
+  const userId = params?.userId
   const router = useRouter()
   const theme = useTheme()
 

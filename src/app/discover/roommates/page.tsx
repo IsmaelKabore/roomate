@@ -127,7 +127,8 @@ export default function RoommatesPage() {
           } = undefined
 
           try {
-            profileData = await fetchUserProfile(p.userId)
+            const fetchedProfile = await fetchUserProfile(p.userId)
+            profileData = fetchedProfile ? fetchedProfile : undefined
           } catch {
             // ignore if no profile
           }

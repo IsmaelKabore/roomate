@@ -1,95 +1,76 @@
 // File: src/app/api/posts/create/route.ts
+import { NextResponse } from 'next/server'
+import admin from 'firebase-admin'
 
-import { NextResponse } from "next/server"
-import { initializeApp } from "firebase/app"
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  serverTimestamp,
-} from "firebase/firestore"
-import { getOpenAIEmbedding } from "../../../../lib/openai-embed"
-import { firebaseConfig } from "../../../../lib/firebaseConfig"
-
-// Initialize Firebase app & Firestore once
-const app = initializeApp(firebaseConfig)
-const db = getFirestore(app)
-
-interface CreatePostRequest {
-  title: string
-  description: string
-  address?: string
-  price?: number
-  images: string[]     // URLs only; front end must upload files separately
-  type: "room" | "roommate"
-  userId: string       // from authenticated user on front end
-  keywords: string[]   // array of trimmed, lowercased keywords
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID!,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL!,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+    }),
+  })
 }
+const db = admin.firestore()
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const body = (await request.json()) as CreatePostRequest
     const {
       title,
       description,
-      address = "",
+      address,
+      images,
+      userId,
+      type,
       price,
-      images,
-      type,
-      userId,
       keywords,
-    } = body
+      bedrooms,
+      bathrooms,
+      furnished,
+    } = await req.json()
 
-    if (!userId) {
+    if (
+      !userId ||
+      !Array.isArray(images) ||
+      images.length === 0 ||
+      !Array.isArray(keywords) ||
+      keywords.length === 0 ||
+      typeof description !== 'string' ||
+      (type === 'room' && (typeof title !== 'string' || !title.trim())) ||
+      (type === 'room' && (typeof address !== 'string' || !address.trim())) ||
+      (type === 'room' && typeof price !== 'number') ||
+      (type === 'room' && typeof bedrooms !== 'number') ||
+      (type === 'room' && typeof bathrooms !== 'number') ||
+      (type === 'room' && typeof furnished !== 'boolean')
+    ) {
       return NextResponse.json(
-        { error: "Unauthorized: missing userId" },
-        { status: 401 }
-      )
-    }
-    if (!title || !description) {
-      return NextResponse.json(
-        { error: "Title and description are required" },
+        { error: 'Missing required field' },
         { status: 400 }
       )
     }
-    if (!Array.isArray(images) || images.length === 0) {
-      return NextResponse.json(
-        { error: "At least one image URL is required" },
-        { status: 400 }
-      )
-    }
-    if (!Array.isArray(keywords) || keywords.length === 0) {
-      return NextResponse.json(
-        { error: "At least one keyword is required" },
-        { status: 400 }
-      )
-    }
 
-    // Build the combined text for embedding
-    const combinedText = [title.trim(), description.trim(), address.trim()].join("\n")
-
-    // Compute embedding via OpenAI
-    const embedding = await getOpenAIEmbedding(combinedText)
-
-    // Write to Firestore, including keywords and embedding
-    const docRef = await addDoc(collection(db, "posts"), {
-      title: title.trim(),
+    const docData: any = {
+      title: type === 'room' ? title.trim() : '',
       description: description.trim(),
-      address: address.trim(),
-      price: price ?? null,
+      address: type === 'room' ? address.trim() : '',
       images,
-      type,
       userId,
+      type,
+      price: type === 'room' ? price : null,
       keywords,
-      embedding, // 1536-element float array
-      createdAt: serverTimestamp(),
-    })
+      structured: type === 'room'
+        ? { bedrooms, bathrooms, furnished }
+        : { bedrooms: null, bathrooms: null, furnished: null },
+      createdAt: admin.firestore.Timestamp.now(),
+      updatedAt: admin.firestore.Timestamp.now(),
+    }
 
-    return NextResponse.json({ id: docRef.id })
+    const ref = await db.collection('posts').add(docData)
+    return NextResponse.json({ id: ref.id })
   } catch (err: any) {
-    console.error("[createPost] error:", err)
+    console.error('[/api/posts/create] Error:', err)
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: err.message || 'Unknown error' },
       { status: 500 }
     )
   }

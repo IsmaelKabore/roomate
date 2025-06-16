@@ -1,30 +1,36 @@
 // File: src/app/api/matches/route.ts
 
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
-import { fetchTopEmbeddingMatchesForKeyword } from "@/lib/matching"
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getOpenAIEmbedding } from "@/lib/openai-embed";
+import { fetchEnhancedMatches } from "@/lib/matching";
+import type { StructuredFilters } from "@/lib/types";
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
+  const body = (await req.json()) as {
+    userId?: string;
+    searchType?: "room" | "roommate";
+    description?: string;
+    structuredFilters?: StructuredFilters;
+  };
+  const { userId, searchType, description, structuredFilters } = body;
+
+  if (!userId || !searchType || !description || !structuredFilters) {
+    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+
   try {
-    const { keyword, userId } = (await request.json()) as {
-      keyword: string
-      userId: string
-    }
-
-    if (!keyword || typeof keyword !== "string") {
-      return NextResponse.json(
-        { error: 'Missing or invalid "keyword" in request body.' },
-        { status: 400 }
-      )
-    }
-
-    const matches = await fetchTopEmbeddingMatchesForKeyword(keyword, 5, userId)
-    return NextResponse.json({ matches })
+    const userEmbedding = await getOpenAIEmbedding(description.trim());
+    const matches = await fetchEnhancedMatches(
+      userEmbedding,
+      structuredFilters,
+      searchType,
+      userId,
+      5
+    );
+    return NextResponse.json({ matches });
   } catch (err: any) {
-    console.error("[API /api/matches] Error:", err)
-    return NextResponse.json(
-      { error: "Internal server error fetching matches." },
-      { status: 500 }
-    )
+    console.error("[/api/matches] error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

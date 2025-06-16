@@ -1,4 +1,3 @@
-// File: src/app/create/[id]/page.tsx
 'use client'
 
 import React, { useEffect, useState, useRef } from 'react'
@@ -42,6 +41,7 @@ interface PostData {
 
 interface UpdatePostPayload {
   postId: string
+  userId: string
   title: string
   description: string
   address: string
@@ -54,7 +54,7 @@ interface UpdatePostPayload {
 const LIBRARIES = ['places'] as const
 
 export default function EditPostPage() {
-  const params = useParams() as { id?: string } | null
+  const { id } = useParams() as { id?: string }
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [post, setPost] = useState<PostData | null>(null)
@@ -64,7 +64,6 @@ export default function EditPostPage() {
     register,
     handleSubmit,
     control,
-    watch,
     reset,
     formState: { errors },
   } = useForm<FormValues>({
@@ -100,16 +99,14 @@ export default function EditPostPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-    const newFiles: File[] = []
-    for (let i = 0; i < files.length; i++) {
-      newFiles.push(files[i])
+    Array.from(files).forEach((file) => {
       const reader = new FileReader()
       reader.onloadend = () => {
         setImagePreviews((prev) => [...prev, reader.result as string])
       }
-      reader.readAsDataURL(files[i])
-    }
-    setImageFiles((prev) => [...prev, ...newFiles])
+      reader.readAsDataURL(file)
+      setImageFiles((prev) => [...prev, file])
+    })
   }
 
   const removeImageAt = (index: number) => {
@@ -119,28 +116,24 @@ export default function EditPostPage() {
 
   // 1) Fetch the post once on mount
   useEffect(() => {
-    async function loadPost() {
-      if (!params || !params.id) {
-        setError('No post ID provided')
-        setLoading(false)
-        return
-      }
-
+    if (!id) {
+      setError('No post ID provided')
+      setLoading(false)
+      return
+    }
+    ;(async () => {
       try {
-        const postRef = doc(db, 'posts', params.id)
+        const postRef = doc(db, 'posts', id)
         const snap = await firebaseGetDoc(postRef)
         if (!snap.exists()) {
           setError('Post not found')
-          setLoading(false)
           return
         }
         const data = snap.data() as any
         if (auth.currentUser?.uid !== data.userId) {
           setError('You do not have permission to edit this post.')
-          setLoading(false)
           return
         }
-
         const fetched: PostData = {
           id: snap.id,
           userId: data.userId,
@@ -153,13 +146,7 @@ export default function EditPostPage() {
           keywords: data.keywords || [],
           embedding: data.embedding || [],
         }
-
-        setPost({
-          ...fetched,
-          address: fetched.address || '',
-        })
-
-        // Pre-fill form, including keywords joined by commas
+        setPost(fetched)
         reset({
           title: fetched.title,
           description: fetched.description,
@@ -167,23 +154,20 @@ export default function EditPostPage() {
           address: fetched.address,
           keywordsInput: fetched.keywords.join(', '),
         })
-        setImagePreviews(fetched.images || [])
-        setLoading(false)
+        setImagePreviews(fetched.images)
       } catch (e) {
         console.error('Error loading post:', e)
         setError('Failed to load post.')
+      } finally {
         setLoading(false)
       }
-    }
-
-    loadPost()
-  }, [params, reset])
+    })()
+  }, [id, reset])
 
   // 2) Handle form submission
   const onSubmit = async (data: FormValues) => {
     if (!post) return
     setLoading(true)
-
     const user = auth.currentUser
     if (!user) {
       alert('Log in first')
@@ -192,22 +176,17 @@ export default function EditPostPage() {
     }
 
     try {
-      // 2a) Upload any new image files
-      let uploadedUrls: string[] = []
-      if (imageFiles.length > 0) {
-        const uploadPromises = imageFiles.map((file) => uploadImage(file))
-        uploadedUrls = await Promise.all(uploadPromises)
-      }
-
+      // 2a) Upload new images
+      const newUrls = await Promise.all(
+        imageFiles.map((file) => uploadImage(file))
+      )
       // 2b) Combine with existing previews
-      const finalImages = [...(post.images || []), ...uploadedUrls]
-
+      const finalImages = [...post.images, ...newUrls]
       // 2c) Parse keywordsInput → string[]
       const keywordsArray = data.keywordsInput
         .split(',')
         .map((kw) => kw.trim().toLowerCase())
         .filter((kw) => kw.length > 0)
-
       if (keywordsArray.length === 0) {
         alert('Enter at least one keyword (comma-separated)')
         setLoading(false)
@@ -217,9 +196,10 @@ export default function EditPostPage() {
       // 2d) Build payload for update
       const payload: UpdatePostPayload = {
         postId: post.id,
-        title: data.title,
-        description: data.description,
-        address: data.address,
+        userId: user.uid,
+        title: data.title.trim(),
+        description: data.description.trim(),
+        address: data.address.trim(),
         price: data.price,
         images: finalImages,
         type: post.type,
@@ -236,7 +216,10 @@ export default function EditPostPage() {
         throw new Error(body.error || 'Failed to update post')
       }
 
-      router.push('/discover/rooms')
+      // redirect back to discovery
+      router.push(
+        post.type === 'room' ? '/discover/rooms' : '/discover/roommates'
+      )
     } catch (e: any) {
       console.error('Error updating post:', e)
       alert(e.message || 'Failed to update post.')
@@ -244,15 +227,14 @@ export default function EditPostPage() {
     }
   }
 
-  // 3) Render loading / error states first
+  // Loading / error states
   if (loading) {
     return (
       <Box sx={{ textAlign: 'center', mt: 6 }}>
-        <CircularProgress />
+        <CircularProgress size={48} />
       </Box>
     )
   }
-
   if (error) {
     return (
       <Box sx={{ textAlign: 'center', mt: 6 }}>
@@ -264,7 +246,7 @@ export default function EditPostPage() {
     )
   }
 
-  // 4) Now we have a non-null post and form is initialized
+  // 4) Render form
   return (
     <Box
       sx={{
@@ -278,7 +260,7 @@ export default function EditPostPage() {
     >
       <Paper sx={{ p: 4, width: '100%', maxWidth: 600, borderRadius: 2 }}>
         <Typography variant="h4" sx={{ mb: 3, color: '#1976d2' }}>
-          Edit {post?.type === 'room' ? 'Room' : 'Roommate'} Post
+          Edit {post!.type === 'room' ? 'Room' : 'Roommate'} Post
         </Typography>
 
         {loadError && (
@@ -295,7 +277,7 @@ export default function EditPostPage() {
         {isLoaded && (
           <form onSubmit={handleSubmit(onSubmit)} noValidate>
             {/* Title (if room) */}
-            {post?.type === 'room' && (
+            {post!.type === 'room' && (
               <TextField
                 label="Title"
                 fullWidth
@@ -309,9 +291,9 @@ export default function EditPostPage() {
             {/* Description */}
             <TextField
               label={
-                post?.type === 'room'
+                post!.type === 'room'
                   ? 'Description (e.g. 2BR furnished apartment…)'
-                  : 'Describe what type of roommate you are looking for'
+                  : 'Describe the roommate you’re looking for'
               }
               fullWidth
               multiline
@@ -322,7 +304,7 @@ export default function EditPostPage() {
               sx={{ mb: 3 }}
             />
 
-            {/* Keywords (comma-separated) */}
+            {/* Keywords */}
             <TextField
               label="Keywords (comma-separated)"
               fullWidth
@@ -330,12 +312,15 @@ export default function EditPostPage() {
                 required: 'Enter at least one keyword',
               })}
               error={!!errors.keywordsInput}
-              helperText={errors.keywordsInput?.message || 'e.g. furnished, 2BR, near campus'}
+              helperText={
+                errors.keywordsInput?.message ||
+                'e.g. furnished, 2BR, near campus'
+              }
               sx={{ mb: 3 }}
             />
 
-            {/* Price (if room) */}
-            {post && post.type === 'room' && (
+            {/* Price */}
+            {post!.type === 'room' && (
               <TextField
                 label="Price (USD/mo)"
                 type="number"
@@ -350,8 +335,8 @@ export default function EditPostPage() {
               />
             )}
 
-            {/* Address (if room) */}
-            {post?.type === 'room' && (
+            {/* Address */}
+            {post!.type === 'room' && (
               <Controller
                 name="address"
                 control={control}
@@ -434,9 +419,11 @@ export default function EditPostPage() {
               variant="outlined"
               component="label"
               fullWidth
-              sx={{ mb: 2 }}
+              sx={{ mb: 3 }}
             >
-              {imagePreviews.length > 0 ? 'Add/Change Images' : 'Upload Images'}
+              {imagePreviews.length > 0
+                ? 'Add/Change Images'
+                : 'Upload Images'}
               <input
                 type="file"
                 accept="image/*"
@@ -453,20 +440,14 @@ export default function EditPostPage() {
               fullWidth
               sx={{
                 background: '#1976d2',
-                fontWeight: 600,
                 '&:hover': { background: '#1565c0' },
               }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Save Changes'}
+              {loading ? <CircularProgress size={24} /> : 'Save Changes'}
             </Button>
           </form>
         )}
       </Paper>
     </Box>
   )
-}
-
-// Helper alias inside this file to avoid name clash:
-async function getDoc(postRef: ReturnType<typeof doc>) {
-  return await firebaseGetDoc(postRef)
 }

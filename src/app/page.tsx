@@ -91,8 +91,8 @@ export default function HomePage() {
             Sharespace
           </h1>
           <p className="mt-4 text-lg sm:text-xl md:text-2xl text-white/90 drop-shadow-lg max-w-2xl">
-            we don’t match them but <br className="hidden sm:block" /> we help them
-            find the right one that matches with them
+            we match student looking for roommate <br className="hidden sm:block" /> automatically 
+            with verified rooms and roommates
           </p>
           <Link
             href="/discover"

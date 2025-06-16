@@ -161,7 +161,8 @@ export default function RoomsPage() {
             | undefined
             | { name?: string; profilePicture?: string; traits?: string[] } = undefined
           try {
-            profileData = await fetchUserProfile(p.userId)
+            const fetchedProfile = await fetchUserProfile(p.userId)
+            profileData = fetchedProfile ? fetchedProfile : undefined
           } catch {
             // ignore
           }
