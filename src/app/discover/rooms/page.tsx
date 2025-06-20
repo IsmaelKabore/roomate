@@ -1,7 +1,7 @@
 // File: src/app/discover/rooms/page.tsx
 'use client'
 
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import {
   Box,
   Card,
@@ -44,7 +44,8 @@ type RoomPost = {
   }
 }
 
-function Carousel({ images }: { images: string[] }) {
+// Memoized carousel component for better performance
+const Carousel = React.memo(({ images }: { images: string[] }) => {
   const [current, setCurrent] = useState(0)
   const prev = () => setCurrent((c) => (c - 1 + images.length) % images.length)
   const next = () => setCurrent((c) => (c + 1) % images.length)
@@ -86,6 +87,7 @@ function Carousel({ images }: { images: string[] }) {
           height: '100%',
           objectFit: 'cover',
         }}
+        loading="lazy" // Add lazy loading for images
       />
       {images.length > 1 && (
         <>
@@ -102,9 +104,8 @@ function Carousel({ images }: { images: string[] }) {
               height: 40,
               '&:hover': { 
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                transform: 'translateY(-50%) scale(1.1)',
               },
-              transition: 'all 0.2s ease',
+              transition: 'background-color 0.2s ease',
             }}
             size="small"
           >
@@ -123,9 +124,8 @@ function Carousel({ images }: { images: string[] }) {
               height: 40,
               '&:hover': { 
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                transform: 'translateY(-50%) scale(1.1)',
               },
-              transition: 'all 0.2s ease',
+              transition: 'background-color 0.2s ease',
             }}
             size="small"
           >
@@ -135,11 +135,14 @@ function Carousel({ images }: { images: string[] }) {
       )}
     </Box>
   )
-}
+})
+
+Carousel.displayName = 'Carousel'
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<RoomPost[]>([])
   const [loading, setLoading] = useState(true)
+  const [profilesLoading, setProfilesLoading] = useState(false)
   const router = useRouter()
 
   // Filter state
@@ -153,48 +156,86 @@ export default function RoomsPage() {
   const itemsPerPage = 6
 
   useEffect(() => {
-    ;(async () => {
-      const raw: RoomPost[] = await getRoomPosts()
+    const loadRooms = async () => {
+      try {
+        const raw: RoomPost[] = await getRoomPosts()
 
-      // Derive a simple locationLabel from the address (text before comma)
-      const withLocation = raw.map((p) => ({
-        ...p,
-        locationLabel: p.address?.split(',')[0]?.trim() || 'Other',
-      }))
+        // Derive a simple locationLabel from the address (text before comma)
+        const withLocation = raw.map((p) => ({
+          ...p,
+          locationLabel: p.address?.split(',')[0]?.trim() || 'Other',
+        }))
 
-      // Enrich with profile if available
-      const enriched = await Promise.all(
-        withLocation.map(async (p) => {
-          let profileData:
-            | undefined
-            | { name?: string; profilePicture?: string; traits?: string[] } = undefined
-          try {
-            const fetchedProfile = await fetchUserProfile(p.userId)
-            profileData = fetchedProfile ? fetchedProfile : undefined
-          } catch {
-            // ignore
-          }
-          return { ...p, profile: profileData }
-        })
-      )
+        // Sort by createdAt descending (most recent first)
+        withLocation.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
 
-      // Sort by createdAt descending (most recent first)
-      enriched.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+        // Compute actual min/max price from fetched data
+        const prices = withLocation
+          .map((r) => (typeof r.price === 'number' ? r.price : 0))
+          .filter((p) => p > 0)
+        const derivedMin = prices.length ? Math.min(...prices) : 0
+        const derivedMax = prices.length ? Math.max(...prices) : derivedMin
 
-      // Compute actual min/max price from fetched data
-      const prices = enriched
-        .map((r) => (typeof r.price === 'number' ? r.price : 0))
-        .filter((p) => p > 0)
-      const derivedMin = prices.length ? Math.min(...prices) : 0
-      const derivedMax = prices.length ? Math.max(...prices) : derivedMin
+        setMinPrice(derivedMin)
+        setMaxPrice(derivedMax)
+        setPriceRange([derivedMin, derivedMax])
+        setRooms(withLocation)
+        setLoading(false)
 
-      setMinPrice(derivedMin)
-      setMaxPrice(derivedMax)
-      setPriceRange([derivedMin, derivedMax])
-      setRooms(enriched)
-      setLoading(false)
-    })()
+        // Load profiles in background after initial render
+        loadProfiles(withLocation)
+      } catch (error) {
+        console.error('Error loading rooms:', error)
+        setLoading(false)
+      }
+    }
+
+    loadRooms()
   }, [])
+
+  // Separate function to load profiles asynchronously
+  const loadProfiles = async (roomsData: RoomPost[]): Promise<void> => {
+    setProfilesLoading(true)
+    try {
+      // Load profiles in batches to avoid overwhelming the system
+      const batchSize = 5
+      const batches: RoomPost[][] = []
+      for (let i = 0; i < roomsData.length; i += batchSize) {
+        batches.push(roomsData.slice(i, i + batchSize))
+      }
+
+      for (const batch of batches) {
+        const enrichedBatch = await Promise.all(
+          batch.map(async (p) => {
+            let profileData: undefined | {
+              name?: string
+              profilePicture?: string
+              traits?: string[]
+            } = undefined
+            try {
+              const fetchedProfile = await fetchUserProfile(p.userId)
+              profileData = fetchedProfile ? fetchedProfile : undefined
+            } catch {
+              // ignore
+            }
+            return { ...p, profile: profileData }
+          })
+        )
+
+                 // Update rooms with the enriched batch
+         setRooms(prevRooms => 
+           prevRooms.map(room => {
+             const enriched = enrichedBatch.find(er => er.id === room.id)
+             return enriched ? enriched : room
+           })
+         )
+      }
+    } catch (error) {
+      console.error('Error loading profiles:', error)
+    } finally {
+      setProfilesLoading(false)
+    }
+  }
 
   const handleChat = (room: RoomPost) => {
     const user = auth.currentUser
@@ -206,6 +247,28 @@ export default function RoomsPage() {
     createRoom(roomId, [user.uid, room.userId]).then(() => {
       router.push(`/messages/${roomId}`)
     })
+  }
+
+  // Memoized filtered rooms for better performance
+  const filteredRooms = useMemo(() => {
+    return rooms.filter((room) => {
+      const matchesPrice = !room.price || (room.price >= priceRange[0] && room.price <= priceRange[1])
+      const matchesAddress = !addressFilter || 
+        room.address?.toLowerCase().includes(addressFilter.toLowerCase()) ||
+        room.locationLabel?.toLowerCase().includes(addressFilter.toLowerCase())
+      
+      return matchesPrice && matchesAddress
+    })
+  }, [rooms, priceRange, addressFilter])
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredRooms.length / itemsPerPage)
+  const startIdx = (page - 1) * itemsPerPage
+  const paginatedRooms = filteredRooms.slice(startIdx, startIdx + itemsPerPage)
+
+  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   if (loading) {
@@ -224,477 +287,286 @@ export default function RoomsPage() {
     )
   }
 
-  // Filter rooms based on price range and address
-  const filteredRooms = rooms.filter((room) => {
-    const roomPrice = room.price || 0
-    const matchesPrice = roomPrice >= priceRange[0] && roomPrice <= priceRange[1]
-    const matchesAddress = addressFilter
-      ? room.address?.toLowerCase().includes(addressFilter.toLowerCase())
-      : true
-    return matchesPrice && matchesAddress
-  })
-
-  // Group by location
-  const groupedByLocation = filteredRooms.reduce((acc, room) => {
-    const location = room.locationLabel || 'Other'
-    if (!acc[location]) acc[location] = []
-    acc[location].push(room)
-    return acc
-  }, {} as Record<string, RoomPost[]>)
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredRooms.length / itemsPerPage)
-  const startIdx = (page - 1) * itemsPerPage
-  const paginatedRooms = filteredRooms.slice(startIdx, startIdx + itemsPerPage)
-
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
   return (
     <Box
       sx={{
-        display: 'flex',
-        width: '100%',
         minHeight: '100vh',
         background: 'var(--gradient-background)',
+        color: 'var(--foreground)',
+        p: 4,
       }}
     >
-      {/* ==========================
-            1) Left Sidebar (Filters)
-         ========================== */}
-      <Box
-        className="dark-card"
+      <Typography
+        variant="h4"
         sx={{
-          width: { xs: '100%', sm: 300 },
-          flexShrink: 0,
-          background: 'var(--background-card)',
-          backdropFilter: 'blur(20px)',
-          border: '1px solid var(--border)',
-          color: 'var(--foreground)',
-          px: 3,
-          py: 4,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          height: '100vh',
-          boxSizing: 'border-box',
+          mb: 4,
+          textAlign: 'center',
+          background: 'var(--gradient-primary)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          fontWeight: 700,
         }}
       >
-        <Typography 
-          variant="h6" 
-          sx={{ 
-            mb: 1, 
-            fontWeight: 700, 
-            letterSpacing: 1,
-            color: 'var(--foreground)',
-            background: 'var(--gradient-primary)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+        Explore Rooms
+      </Typography>
+
+      <Box sx={{ display: 'flex', gap: 4, maxWidth: 1400, mx: 'auto' }}>
+        {/* Sidebar */}
+        <Box
+          sx={{
+            width: 300,
+            flexShrink: 0,
+            background: 'var(--background-card)',
+            borderRadius: '16px',
+            p: 3,
+            height: 'fit-content',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          Filters
-        </Typography>
-
-        {/* Address Filter (substring search) */}
-        <TextField
-          label="Location"
-          placeholder="e.g. Berkeley"
-          fullWidth
-          value={addressFilter}
-          onChange={(e) => setAddressFilter(e.target.value)}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'var(--background-secondary)',
-              color: 'var(--foreground)',
-              borderRadius: '12px',
-              '& fieldset': {
-                borderColor: 'var(--border)',
-              },
-              '&:hover fieldset': {
-                borderColor: 'var(--primary)',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: 'var(--primary)',
-              },
-            },
-            '& .MuiInputLabel-root': {
-              color: 'var(--foreground-secondary)',
-              '&.Mui-focused': {
-                color: 'var(--primary)',
-              }
-            },
-          }}
-        />
-
-        {/* Price Range Slider */}
-        <Box>
-          <Typography 
-            variant="subtitle2" 
-            sx={{ 
-              color: 'var(--foreground)', 
-              mb: 1, 
-              fontWeight: 600 
-            }}
-          >
-            Price Range
+          <Typography variant="h6" sx={{ mb: 3, color: 'var(--foreground)', fontWeight: 600 }}>
+            Filters
           </Typography>
-          <Slider
-            value={priceRange}
-            onChange={(_, val) => {
-              if (Array.isArray(val)) setPriceRange(val)
-            }}
-            valueLabelDisplay="auto"
-            min={minPrice}
-            max={maxPrice}
-            sx={{
-              color: 'var(--primary)',
-              '& .MuiSlider-thumb': {
-                backgroundColor: 'var(--foreground)',
-                border: '2px solid var(--primary)',
-                boxShadow: 'var(--shadow-blue)',
-                '&:hover': {
-                  boxShadow: 'var(--glow-blue)',
-                }
-              },
-              '& .MuiSlider-track': {
-                backgroundColor: 'var(--primary)',
-              },
-              '& .MuiSlider-rail': {
-                backgroundColor: 'var(--border)',
-              },
-            }}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-            <Typography sx={{ fontSize: '0.875rem', color: 'var(--foreground-secondary)', fontWeight: 500 }}>
-              ${priceRange[0].toLocaleString()}
+
+          <Box sx={{ mb: 4 }}>
+            <Typography sx={{ mb: 2, color: 'var(--foreground-secondary)', fontWeight: 500 }}>
+              Price Range: ${priceRange[0]} - ${priceRange[1]}
             </Typography>
-            <Typography sx={{ fontSize: '0.875rem', color: 'var(--foreground-secondary)', fontWeight: 500 }}>
-              ${priceRange[1].toLocaleString()}
-            </Typography>
+            <Slider
+              value={priceRange}
+              onChange={(_, newValue) => setPriceRange(newValue as number[])}
+              min={minPrice}
+              max={maxPrice}
+              sx={{
+                color: 'var(--primary)',
+                '& .MuiSlider-thumb': {
+                  backgroundColor: 'var(--primary)',
+                  border: '2px solid var(--background)',
+                },
+                '& .MuiSlider-track': {
+                  backgroundColor: 'var(--primary)',
+                },
+                '& .MuiSlider-rail': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                },
+              }}
+            />
           </Box>
+
+          <Box>
+            <Typography sx={{ mb: 2, color: 'var(--foreground-secondary)', fontWeight: 500 }}>
+              Location
+            </Typography>
+            <TextField
+              fullWidth
+              placeholder="Enter location..."
+              value={addressFilter}
+              onChange={(e) => setAddressFilter(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'var(--background-secondary)',
+                  borderRadius: '12px',
+                  '& fieldset': {
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'var(--primary)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--primary)',
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  color: 'var(--foreground)',
+                },
+                '& .MuiInputBase-input::placeholder': {
+                  color: 'var(--foreground-secondary)',
+                  opacity: 1,
+                },
+              }}
+            />
+          </Box>
+
+          {profilesLoading && (
+            <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+              <CircularProgress size={16} sx={{ color: 'var(--primary)' }} />
+              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                Loading profiles...
+              </Typography>
+            </Box>
+          )}
         </Box>
 
-        {/* Apply Button */}
-        <Button
-          variant="contained"
-          className="btn-primary"
-          sx={{
-            mt: 'auto',
-            textTransform: 'none',
-            fontWeight: 700,
-            borderRadius: '12px',
-            padding: '12px 24px',
-          }}
-          onClick={() => {
-            // Real-time filtering, so no extra logic
-          }}
-        >
-          Apply Filters
-        </Button>
-      </Box>
-
-      {/* ==========================
-            2) Right Content Area (Listings)
-         ========================== */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          px: { xs: 2, sm: 4 },
-          py: 4,
-          overflowY: 'auto',
-        }}
-      >
-        {Object.keys(groupedByLocation).length === 0 ? (
-          <Box sx={{ textAlign: 'center', mt: 8 }}>
-            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '1.2rem' }}>
-              No rooms found matching your criteria.
-            </Typography>
-          </Box>
-        ) : (
-          <>
-            {Object.entries(groupedByLocation).map(([location, roomsInLocation]) => (
-              <Box key={location} sx={{ mb: 4 }}>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    mb: 2,
-                    fontWeight: 700,
-                    color: 'var(--primary)',
-                    letterSpacing: 0.5,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {location}
-                </Typography>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: {
-                      xs: '1fr',
-                      sm: '1fr',
-                      md: '1fr',
-                    },
-                    gap: 4,
-                  }}
-                >
-                  {roomsInLocation.map((room) => (
-                    <Card
-                      key={room.id}
-                      className="dark-card scale-on-hover"
-                      sx={{
-                        backgroundColor: 'var(--background-card)',
-                        borderRadius: '16px',
-                        overflow: 'hidden',
-                        boxShadow: 'var(--shadow-dark)',
-                        transition: 'all 0.3s ease',
-                        '&:hover': {
-                          transform: 'translateY(-8px)',
-                          boxShadow: 'var(--shadow-blue-hover)',
-                          border: '1px solid var(--primary)',
-                        },
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: 620,
-                      }}
-                    >
-                      {/* --- Profile Header --- */}
-                      <CardHeader
-                        avatar={
-                          <Avatar
-                            src={room.profile?.profilePicture || ''}
-                            sx={{ 
-                              cursor: 'pointer',
-                              backgroundColor: 'var(--primary)',
-                              color: 'var(--foreground)',
-                              border: '2px solid var(--border)',
-                            }}
-                            onClick={() => {
-                              if (!auth.currentUser) {
-                                alert('You must be logged in to view profiles.')
-                              } else {
-                                router.push(`/profile/${room.userId}`)
-                              }
-                            }}
-                          >
-                            {room.profile?.name?.[0] || '?'}
-                          </Avatar>
-                        }
-                        title={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography
-                              variant="subtitle1"
+        {/* Main Content */}
+        <Box sx={{ flex: 1 }}>
+          {filteredRooms.length === 0 ? (
+            <Box
+              sx={{
+                textAlign: 'center',
+                py: 8,
+                background: 'var(--background-card)',
+                borderRadius: '16px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '1.1rem' }}>
+                No rooms found matching your criteria.
+              </Typography>
+            </Box>
+          ) : (
+            <>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
+                  gap: 3,
+                  mb: 4,
+                }}
+              >
+                {paginatedRooms.map((room) => (
+                  <Card
+                    key={room.id}
+                    className="dark-card"
+                    sx={{
+                      background: 'var(--background-card)',
+                      borderRadius: '16px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      overflow: 'hidden',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: 'var(--shadow-blue-hover)',
+                        border: '1px solid var(--primary)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', flexDirection: 'column', height: 500 }}>
+                      <Carousel images={room.images} />
+                      
+                      <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                        <CardHeader
+                          avatar={
+                            <Avatar
+                              src={room.profile?.profilePicture}
                               sx={{ 
-                                cursor: 'pointer', 
-                                fontWeight: 600,
-                                color: 'var(--foreground)',
-                                '&:hover': {
-                                  color: 'var(--primary)',
-                                },
-                                transition: 'color 0.2s ease',
-                              }}
-                              onClick={() => {
-                                if (!auth.currentUser) {
-                                  alert('You must be logged in to view profiles.')
-                                } else {
-                                  router.push(`/profile/${room.userId}`)
-                                }
+                                bgcolor: 'var(--primary)',
+                                width: 40,
+                                height: 40,
                               }}
                             >
-                              {room.profile?.name || 'Unknown User'}
+                              {room.profile?.name?.[0] || '?'}
+                            </Avatar>
+                          }
+                          title={
+                            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600 }}>
+                              {room.profile?.name || 'Anonymous'}
                             </Typography>
-                            {auth.currentUser && (
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                onClick={() => router.push(`/profile/${room.userId}`)}
-                                sx={{ 
-                                  textTransform: 'none',
-                                  color: 'var(--primary)',
-                                  borderColor: 'var(--primary)',
-                                  '&:hover': {
-                                    backgroundColor: 'var(--primary)',
-                                    color: 'var(--foreground)',
-                                  }
-                                }}
-                              >
-                                View Profile
-                              </Button>
-                            )}
-                          </Box>
-                        }
-                        subheader={
-                          <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
-                            {(room.profile?.traits || []).slice(0, 2).join(', ') || 'No traits listed'}
-                          </Typography>
-                        }
-                        sx={{ 
-                          px: 2, 
-                          py: 1,
-                          backgroundColor: 'var(--background-secondary)',
-                          borderBottom: '1px solid var(--border)',
-                        }}
-                      />
+                          }
+                          subheader={
+                            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                              {room.locationLabel}
+                            </Typography>
+                          }
+                          sx={{ p: 0, mb: 2 }}
+                        />
 
-                      {/* --- Image Carousel --- */}
-                      <Carousel images={room.images} />
+                        <Typography
+                          variant="h6"
+                          sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}
+                        >
+                          {room.title}
+                        </Typography>
 
-                      {/* --- Content Area --- */}
-                      <CardContent
-                        sx={{
-                          flexGrow: 1,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          p: 3,
-                        }}
-                      >
-                        <Box sx={{ mb: 2 }}>
-                          <Typography
-                            variant="h6"
-                            sx={{
-                              fontWeight: 700,
-                              color: 'var(--foreground)',
-                              mb: 1,
-                            }}
-                          >
-                            {room.title}
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: 'var(--foreground-secondary)',
-                              lineHeight: 1.6,
-                              mb: 2,
-                            }}
-                          >
-                            {room.description}
-                          </Typography>
-                        </Box>
+                        <Typography
+                          sx={{
+                            color: 'var(--foreground-secondary)',
+                            mb: 2,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {room.description}
+                        </Typography>
 
-                        {/* Room Details */}
-                        <Box sx={{ mb: 2 }}>
-                          <Typography
-                            variant="h5"
-                            sx={{
-                              fontWeight: 700,
-                              color: 'var(--primary)',
-                              mb: 1,
-                            }}
-                          >
-                            ${room.price?.toLocaleString() || 'N/A'}/month
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: 'var(--foreground-secondary)',
-                              mb: 1,
-                            }}
-                          >
-                            📍 {room.address || 'Address not provided'}
-                          </Typography>
-                          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                            {room.bedrooms && (
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: 'var(--foreground-secondary)',
-                                  backgroundColor: 'var(--background-secondary)',
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: '8px',
-                                  fontSize: '0.8rem',
-                                }}
-                              >
-                                🛏️ {room.bedrooms} bed{room.bedrooms > 1 ? 's' : ''}
-                              </Typography>
-                            )}
-                            {room.bathrooms && (
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: 'var(--foreground-secondary)',
-                                  backgroundColor: 'var(--background-secondary)',
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: '8px',
-                                  fontSize: '0.8rem',
-                                }}
-                              >
-                                🚿 {room.bathrooms} bath{room.bathrooms > 1 ? 's' : ''}
-                              </Typography>
-                            )}
-                            {room.sqft && (
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: 'var(--foreground-secondary)',
-                                  backgroundColor: 'var(--background-secondary)',
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: '8px',
-                                  fontSize: '0.8rem',
-                                }}
-                              >
-                                📐 {room.sqft} sqft
-                              </Typography>
-                            )}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                          {room.price && (
+                            <Typography
+                              sx={{
+                                color: 'var(--primary)',
+                                fontWeight: 700,
+                                fontSize: '1.2rem',
+                              }}
+                            >
+                              ${room.price}/month
+                            </Typography>
+                          )}
+                          <Box sx={{ display: 'flex', gap: 2, fontSize: '0.9rem', color: 'var(--foreground-secondary)' }}>
+                            {room.bedrooms && <span>{room.bedrooms} bed</span>}
+                            {room.bathrooms && <span>{room.bathrooms} bath</span>}
+                            {room.sqft && <span>{room.sqft} sqft</span>}
                           </Box>
                         </Box>
 
-                        {/* Action Button */}
-                        <Box sx={{ mt: 'auto', textAlign: 'right' }}>
-                          <Button
-                            variant="contained"
-                            startIcon={<ChatIcon />}
-                            onClick={() => handleChat(room)}
-                            className="btn-primary"
-                            sx={{
-                              textTransform: 'none',
-                              fontWeight: 600,
-                              borderRadius: '12px',
-                              px: 3,
-                            }}
-                          >
-                            Contact
-                          </Button>
-                        </Box>
+                        <Button
+                          onClick={() => handleChat(room)}
+                          startIcon={<ChatIcon />}
+                          className="btn-primary"
+                          fullWidth
+                          sx={{
+                            mt: 'auto',
+                            textTransform: 'none',
+                            borderRadius: '12px',
+                            py: 1.5,
+                            '&.btn-primary': {
+                              background: 'var(--gradient-primary)',
+                              color: 'white',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
+                                transform: 'translateY(-1px)',
+                              }
+                            }
+                          }}
+                        >
+                          Contact Owner
+                        </Button>
                       </CardContent>
-                    </Card>
-                  ))}
-                </Box>
+                    </Box>
+                  </Card>
+                ))}
               </Box>
-            ))}
 
-            {/* Pagination */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={handlePageChange}
-                color="primary"
-                size="large"
-                sx={{
-                  '& .MuiPaginationItem-root': {
-                    color: 'var(--foreground-secondary)',
-                    borderColor: 'var(--border)',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                      color: 'var(--primary)',
-                    },
-                    '&.Mui-selected': {
-                      backgroundColor: 'var(--primary)',
-                      color: 'var(--foreground)',
-                      '&:hover': {
-                        backgroundColor: 'var(--primary-hover)',
-                      }
-                    }
-                  }
-                }}
-              />
-            </Box>
-          </>
-        )}
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    onChange={handlePageChange}
+                    sx={{
+                      '& .MuiPaginationItem-root': {
+                        color: 'var(--foreground)',
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                          borderColor: 'var(--primary)',
+                        },
+                        '&.Mui-selected': {
+                          backgroundColor: 'var(--primary)',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: 'var(--primary-hover)',
+                          },
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+              )}
+            </>
+          )}
+        </Box>
       </Box>
     </Box>
   )

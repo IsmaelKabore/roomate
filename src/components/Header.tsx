@@ -13,11 +13,21 @@ export default function Header() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Faster auth check with timeout
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 500); // Max 500ms wait
+
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setIsLoading(false);
+      clearTimeout(timer);
     });
-    return () => unsubscribe();
+    
+    return () => {
+      unsubscribe();
+      clearTimeout(timer);
+    };
   }, []);
 
   const handleLogout = async () => {

@@ -23,10 +23,20 @@ export default function DiscoverRootPage() {
   const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
+    // Faster auth check with timeout
+    const timer = setTimeout(() => {
+      setCheckingAuth(false)
+    }, 500) // Max 500ms wait
+
     const unsubscribe = auth.onAuthStateChanged(() => {
       setCheckingAuth(false)
+      clearTimeout(timer)
     })
-    return () => unsubscribe()
+    
+    return () => {
+      unsubscribe()
+      clearTimeout(timer)
+    }
   }, [])
 
   if (checkingAuth) {
@@ -66,7 +76,7 @@ export default function DiscoverRootPage() {
         color: 'var(--foreground)',
       }}
     >
-      <div className="text-center mb-12 opacity-0 animate-[fadeIn_0.8s_ease-out_forwards]">
+      <div className="text-center mb-12">
         <Typography
           variant="h3"
           sx={{ 
@@ -186,39 +196,20 @@ export default function DiscoverRootPage() {
   )
 }
 
-// Consistent dark theme card styles using CSS custom properties
+// Optimized card styles - reduced complexity for better performance
 const cardSx = {
   flex: 1,
   background: 'var(--background-card)',
-  backdropFilter: 'blur(20px)',
   border: '1px solid rgba(255, 255, 255, 0.1)',
   borderRadius: '16px',
   boxShadow: 'var(--shadow-dark)',
-  transition: 'all 0.5s ease',
+  transition: 'all 0.3s ease', // Reduced from 0.5s
   position: 'relative',
   overflow: 'hidden',
-  '&:before': {
-    content: '""',
-    position: 'absolute',
-    top: -100,
-    left: -100,
-    width: 200,
-    height: 200,
-    background: 'radial-gradient(circle, rgba(0, 122, 255, 0.1) 0%, transparent 70%)',
-    borderRadius: '50%',
-    transition: 'all 0.5s ease',
-  },
   '&:hover': {
-    transform: 'translateY(-12px) scale(1.02)',
+    transform: 'translateY(-8px)', // Reduced movement for better performance
     boxShadow: 'var(--shadow-blue-hover)',
     border: '1px solid var(--primary)',
-  },
-  '&:hover:before': {
-    top: -150,
-    left: -150,
-    width: 300,
-    height: 300,
-    background: 'radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, transparent 70%)',
   },
 }
 
@@ -238,8 +229,7 @@ const iconSx = {
   fontSize: 72, 
   color: 'var(--primary)', 
   mb: 3, 
-  filter: 'drop-shadow(0 0 20px rgba(0, 122, 255, 0.5))',
-  transition: 'all 0.3s ease'
+  transition: 'all 0.2s ease' // Simplified transition
 }
 
 const titleSx = { 
@@ -266,28 +256,12 @@ const buttonSx = {
   borderRadius: '12px',
   background: 'transparent',
   border: '2px solid transparent',
-  position: 'relative',
-  overflow: 'hidden',
-  transition: 'all 0.3s ease',
+  transition: 'all 0.2s ease', // Faster transition
   cursor: 'pointer',
-  '&:before': {
-    content: '""',
-    position: 'absolute',
-    top: 0,
-    left: '-100%',
-    width: '100%',
-    height: '100%',
-    background: 'linear-gradient(90deg, transparent, rgba(0, 122, 255, 0.1), transparent)',
-    transition: 'left 0.5s ease'
-  },
   '&:hover': {
     color: 'var(--foreground)',
     background: 'var(--gradient-primary)',
     borderColor: 'var(--primary)',
     transform: 'translateY(-2px)',
-    boxShadow: 'var(--glow-blue)'
-  },
-  '&:hover:before': {
-    left: '100%'
   }
 }
