@@ -10,10 +10,12 @@ import { auth } from '@/lib/firebaseConfig';
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
+      setIsLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -135,167 +137,171 @@ export default function Header() {
             </Button>
           </Link>
 
-          {user ? (
+          {!isLoading && (
             <>
-              <Link href="/my-posts" passHref>
-                <Button
-                  sx={{
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    borderRadius: '12px',
-                    padding: '8px 16px',
-                    '&:hover': { 
-                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                      color: '#007AFF'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  My Posts
-                </Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link href="/my-posts" passHref>
+                    <Button
+                      sx={{
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        borderRadius: '12px',
+                        padding: '8px 16px',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                          color: '#007AFF'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      My Posts
+                    </Button>
+                  </Link>
 
-              <Link href="/profile" passHref>
-                <Button
-                  sx={{
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    borderRadius: '12px',
-                    padding: '8px 16px',
-                    '&:hover': { 
-                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                      color: '#007AFF'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Profile
-                </Button>
-              </Link>
+                  <Link href="/profile" passHref>
+                    <Button
+                      sx={{
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        borderRadius: '12px',
+                        padding: '8px 16px',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                          color: '#007AFF'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      Profile
+                    </Button>
+                  </Link>
 
-              <Link href="/messages" passHref>
-                <Button
-                  sx={{
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    borderRadius: '12px',
-                    padding: '8px 16px',
-                    '&:hover': { 
-                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                      color: '#007AFF'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Inbox
-                </Button>
-              </Link>
+                  <Link href="/messages" passHref>
+                    <Button
+                      sx={{
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        borderRadius: '12px',
+                        padding: '8px 16px',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                          color: '#007AFF'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      Inbox
+                    </Button>
+                  </Link>
 
-              <Button
-                onClick={handleLogout}
-                sx={{
-                  color: '#ef4444',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  fontSize: '0.95rem',
-                  borderRadius: '10px',
-                  padding: '8px 14px',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&:before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: '-100%',
-                    width: '100%',
-                    height: '100%',
-                    background: 'linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent)',
-                    transition: 'left 0.5s ease'
-                  },
-                  '&:hover': { 
-                    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                    color: '#ff5555',
-                    transform: 'translateY(-1px)',
-                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
-                  },
-                  '&:hover:before': {
-                    left: '100%'
-                  },
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                🚪 Logout
-              </Button>
-            </>
-          ) : (
-            <>
-              <Link href="/auth/login" passHref>
-                <Button
-                  sx={{
-                    color: '#ffffff',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    borderRadius: '12px',
-                    padding: '8px 16px',
-                    '&:hover': { 
-                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                      color: '#007AFF'
-                    },
-                    transition: 'all 0.3s ease'
-                  }}
-                >
-                  Login
-                </Button>
-              </Link>
-              
-              <Link href="/auth/signup" passHref>
-                <Button
-                  sx={{
-                    background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    textTransform: 'none',
-                    fontSize: '0.95rem',
-                    borderRadius: '12px',
-                    padding: '10px 20px',
-                    boxShadow: '0 4px 15px rgba(0, 122, 255, 0.3)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&:before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: '-100%',
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                      transition: 'left 0.5s ease'
-                    },
-                    '&:hover': { 
-                      background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
-                      transform: 'translateY(-2px)',
-                      boxShadow: '0 8px 25px rgba(0, 122, 255, 0.4)'
-                    },
-                    '&:hover:before': {
-                      left: '100%'
-                    },
-                    '&:active': {
-                      transform: 'translateY(0)',
-                      transition: 'transform 0.1s ease'
-                    },
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  ✨ Sign Up
-                </Button>
-              </Link>
+                  <Button
+                    onClick={handleLogout}
+                    sx={{
+                      color: '#ef4444',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: '0.95rem',
+                      borderRadius: '10px',
+                      padding: '8px 14px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&:before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '-100%',
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.1), transparent)',
+                        transition: 'left 0.5s ease'
+                      },
+                      '&:hover': { 
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        color: '#ff5555',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
+                      },
+                      '&:hover:before': {
+                        left: '100%'
+                      },
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    🚪 Logout
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth/login" passHref>
+                    <Button
+                      sx={{
+                        color: '#ffffff',
+                        fontWeight: 600,
+                        textTransform: 'none',
+                        fontSize: '1rem',
+                        borderRadius: '12px',
+                        padding: '8px 16px',
+                        '&:hover': { 
+                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                          color: '#007AFF'
+                        },
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      Login
+                    </Button>
+                  </Link>
+                  
+                  <Link href="/auth/signup" passHref>
+                    <Button
+                      sx={{
+                        background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
+                        color: '#ffffff',
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        fontSize: '0.95rem',
+                        borderRadius: '12px',
+                        padding: '10px 20px',
+                        boxShadow: '0 4px 15px rgba(0, 122, 255, 0.3)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&:before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: '-100%',
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                          transition: 'left 0.5s ease'
+                        },
+                        '&:hover': { 
+                          background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 8px 25px rgba(0, 122, 255, 0.4)'
+                        },
+                        '&:hover:before': {
+                          left: '100%'
+                        },
+                        '&:active': {
+                          transform: 'translateY(0)',
+                          transition: 'transform 0.1s ease'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      ✨ Sign Up
+                    </Button>
+                  </Link>
+                </>
+              )}
             </>
           )}
         </Box>
