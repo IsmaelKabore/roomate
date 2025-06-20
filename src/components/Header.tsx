@@ -248,21 +248,31 @@ export default function Header() {
                   </Button>
                 </>
               ) : (
-                <>
+                <Box 
+                  sx={{ 
+                    display: 'flex', 
+                    gap: 0.5, 
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '14px',
+                    padding: '4px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                  }}
+                >
                   <Link href="/auth/login" passHref>
                     <Button
                       sx={{
                         color: '#ffffff',
                         fontWeight: 600,
                         textTransform: 'none',
-                        fontSize: '1rem',
-                        borderRadius: '12px',
+                        fontSize: '0.95rem',
+                        borderRadius: '10px',
                         padding: '8px 16px',
+                        minWidth: '70px',
                         '&:hover': { 
-                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                          backgroundColor: 'rgba(0, 122, 255, 0.15)',
                           color: '#007AFF'
                         },
-                        transition: 'all 0.3s ease'
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       Login
@@ -274,43 +284,25 @@ export default function Header() {
                       sx={{
                         background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
                         color: '#ffffff',
-                        fontWeight: 700,
+                        fontWeight: 600,
                         textTransform: 'none',
                         fontSize: '0.95rem',
-                        borderRadius: '12px',
-                        padding: '10px 20px',
-                        boxShadow: '0 4px 15px rgba(0, 122, 255, 0.3)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        '&:before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: '-100%',
-                          width: '100%',
-                          height: '100%',
-                          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                          transition: 'left 0.5s ease'
-                        },
+                        borderRadius: '10px',
+                        padding: '8px 16px',
+                        minWidth: '80px',
+                        boxShadow: '0 2px 8px rgba(0, 122, 255, 0.3)',
                         '&:hover': { 
                           background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 8px 25px rgba(0, 122, 255, 0.4)'
-                        },
-                        '&:hover:before': {
-                          left: '100%'
-                        },
-                        '&:active': {
-                          transform: 'translateY(0)',
-                          transition: 'transform 0.1s ease'
+                          boxShadow: '0 4px 12px rgba(0, 122, 255, 0.4)',
+                          transform: 'translateY(-1px)'
                         },
                         transition: 'all 0.2s ease'
                       }}
                     >
-                      ✨ Sign Up
+                      Sign Up
                     </Button>
                   </Link>
-                </>
+                </Box>
               )}
             </>
           )}
