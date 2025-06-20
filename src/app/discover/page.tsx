@@ -37,10 +37,10 @@ export default function DiscoverRootPage() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #2d3748 100%)',
+          background: 'var(--gradient-background)',
         }}
       >
-        <CircularProgress sx={{ color: '#007AFF' }} />
+        <CircularProgress sx={{ color: 'var(--primary)' }} />
       </Box>
     )
   }
@@ -62,8 +62,8 @@ export default function DiscoverRootPage() {
         alignItems: 'center',
         pt: 8,
         px: 4,
-        background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #2d3748 100%)',
-        color: '#ffffff',
+        background: 'var(--gradient-background)',
+        color: 'var(--foreground)',
       }}
     >
       <div className="text-center mb-12 opacity-0 animate-[fadeIn_0.8s_ease-out_forwards]">
@@ -71,7 +71,7 @@ export default function DiscoverRootPage() {
           variant="h3"
           sx={{ 
             mb: 3, 
-            background: 'linear-gradient(135deg, #007AFF 0%, #00BFFF 100%)',
+            background: 'var(--gradient-primary)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
             fontWeight: 700, 
@@ -82,26 +82,26 @@ export default function DiscoverRootPage() {
           Welcome to Discover
         </Typography>
 
-        {/* "See My Matches" at top */}
+        {/* "See My Matches" at top - Using consistent button styling */}
         <Button
           variant="contained"
           onClick={goToMatching}
+          className="btn-primary"
           sx={{
-            background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
-            color: '#ffffff',
-            fontWeight: 600,
             fontSize: '1.1rem',
             textTransform: 'none',
             borderRadius: '12px',
             padding: '12px 32px',
-            boxShadow: '0 4px 15px rgba(0, 122, 255, 0.3)',
-            '&:hover': { 
-              background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
-              transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(0, 122, 255, 0.4)'
-            },
-            transition: 'all 0.3s ease',
-            mb: 4
+            mb: 4,
+            '&.btn-primary': {
+              background: 'var(--gradient-primary)',
+              boxShadow: 'var(--shadow-blue)',
+              '&:hover': {
+                background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
+                boxShadow: 'var(--shadow-blue-hover)',
+                transform: 'translateY(-2px)'
+              }
+            }
           }}
         >
           ✨ See My Matches
@@ -110,7 +110,7 @@ export default function DiscoverRootPage() {
         <Typography
           variant="h6"
           sx={{
-            color: '#a0aec0',
+            color: 'var(--foreground-secondary)',
             textAlign: 'center',
             maxWidth: 680,
             lineHeight: 1.6,
@@ -134,7 +134,7 @@ export default function DiscoverRootPage() {
         }}
       >
         {/* Explore Rooms */}
-        <Card sx={cardSx}>
+        <Card className="dark-card scale-on-hover" sx={cardSx}>
           <CardActionArea onClick={() => router.push('/discover/rooms')}>
             <CardContent sx={contentSx}>
               <HomeIcon sx={iconSx} />
@@ -145,13 +145,13 @@ export default function DiscoverRootPage() {
                 Browse trusted listings around Berkeley—​butter-smooth VR tours,
                 real-time filters, and immersive neighborhood previews to help you choose your perfect space.
               </Typography>
-              <Typography sx={buttonSx}>View Listings →</Typography>
+              <Typography className="btn-outline" sx={buttonSx}>View Listings →</Typography>
             </CardContent>
           </CardActionArea>
         </Card>
 
         {/* Find Roommates */}
-        <Card sx={cardSx}>
+        <Card className="dark-card scale-on-hover" sx={cardSx}>
           <CardActionArea onClick={() => router.push('/discover/roommates')}>
             <CardContent sx={contentSx}>
               <PeopleIcon sx={iconSx} />
@@ -161,13 +161,13 @@ export default function DiscoverRootPage() {
               <Typography sx={textSx}>
                 Build your profile, set lifestyle preferences, and match with compatible roommates—chat instantly to find the perfect living partner in Berkeley.
               </Typography>
-              <Typography sx={buttonSx}>Meet Roommates →</Typography>
+              <Typography className="btn-outline" sx={buttonSx}>Meet Roommates →</Typography>
             </CardContent>
           </CardActionArea>
         </Card>
 
         {/* Matching */}
-        <Card sx={cardSx}>
+        <Card className="dark-card scale-on-hover" sx={cardSx}>
           <CardActionArea onClick={goToMatching}>
             <CardContent sx={contentSx}>
               <AssignmentIcon sx={iconSx} />
@@ -177,7 +177,7 @@ export default function DiscoverRootPage() {
               <Typography sx={textSx}>
                 Enter a few keywords or let our AI find your top 5 matches—quickly discover the best room or roommate options tailored to you.
               </Typography>
-              <Typography sx={buttonSx}>View Matches →</Typography>
+              <Typography className="btn-outline" sx={buttonSx}>View Matches →</Typography>
             </CardContent>
           </CardActionArea>
         </Card>
@@ -186,14 +186,14 @@ export default function DiscoverRootPage() {
   )
 }
 
-// Dark theme card styles
+// Consistent dark theme card styles using CSS custom properties
 const cardSx = {
   flex: 1,
-  background: 'rgba(30, 40, 53, 0.8)',
+  background: 'var(--background-card)',
   backdropFilter: 'blur(20px)',
   border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: 4,
-  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+  borderRadius: '16px',
+  boxShadow: 'var(--shadow-dark)',
   transition: 'all 0.5s ease',
   position: 'relative',
   overflow: 'hidden',
@@ -210,8 +210,8 @@ const cardSx = {
   },
   '&:hover': {
     transform: 'translateY(-12px) scale(1.02)',
-    boxShadow: '0 20px 40px rgba(0, 122, 255, 0.2)',
-    border: '1px solid rgba(0, 122, 255, 0.3)',
+    boxShadow: 'var(--shadow-blue-hover)',
+    border: '1px solid var(--primary)',
   },
   '&:hover:before': {
     top: -150,
@@ -236,21 +236,21 @@ const contentSx = {
 
 const iconSx = { 
   fontSize: 72, 
-  color: '#007AFF', 
+  color: 'var(--primary)', 
   mb: 3, 
   filter: 'drop-shadow(0 0 20px rgba(0, 122, 255, 0.5))',
   transition: 'all 0.3s ease'
 }
 
 const titleSx = { 
-  color: '#ffffff', 
+  color: 'var(--foreground)', 
   fontWeight: 700, 
   mb: 2,
   fontSize: '1.5rem'
 }
 
 const textSx = { 
-  color: '#a0aec0', 
+  color: 'var(--foreground-secondary)', 
   px: 2, 
   mb: 3, 
   lineHeight: 1.6,
@@ -258,7 +258,7 @@ const textSx = {
 }
 
 const buttonSx = {
-  color: '#007AFF',
+  color: 'var(--primary)',
   fontWeight: 600,
   fontSize: '1rem',
   mt: 'auto',
@@ -269,6 +269,7 @@ const buttonSx = {
   position: 'relative',
   overflow: 'hidden',
   transition: 'all 0.3s ease',
+  cursor: 'pointer',
   '&:before': {
     content: '""',
     position: 'absolute',
@@ -280,11 +281,11 @@ const buttonSx = {
     transition: 'left 0.5s ease'
   },
   '&:hover': {
-    color: '#ffffff',
-    background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
-    borderColor: '#007AFF',
+    color: 'var(--foreground)',
+    background: 'var(--gradient-primary)',
+    borderColor: 'var(--primary)',
     transform: 'translateY(-2px)',
-    boxShadow: '0 8px 25px rgba(0, 122, 255, 0.3)'
+    boxShadow: 'var(--glow-blue)'
   },
   '&:hover:before': {
     left: '100%'

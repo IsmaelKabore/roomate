@@ -89,8 +89,8 @@ export default function HomePage() {
                   prefetch={true}
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                  <span className="relative z-10 text-2xl">🔍</span>
-                  <span className="relative z-10 font-semibold tracking-wide">Search</span>
+                  <span className="relative z-10 text-2xl text-white">🔍</span>
+                  <span className="relative z-10 font-semibold tracking-wide text-white">Search</span>
                   <div className="absolute inset-0 -top-40 bg-gradient-to-b from-white/20 to-transparent w-full h-full transform rotate-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
                 </Link>
                 <Link
@@ -316,8 +316,8 @@ export default function HomePage() {
                           className="group/link relative inline-flex items-center gap-2 px-4 py-2 bg-transparent border-2 border-blue-400/50 text-blue-400 rounded-lg text-sm font-semibold transition-all duration-300 hover:bg-blue-400 hover:text-white hover:border-blue-400 hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-400/25 overflow-hidden"
                         >
                           <span className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 opacity-0 group-hover/link:opacity-100 transition-opacity duration-300"></span>
-                          <span className="relative z-10">View Details</span>
-                          <span className="relative z-10 transition-transform duration-200 group-hover/link:translate-x-1">→</span>
+                          <span className="relative z-10 text-blue-400 group-hover/link:text-white transition-colors duration-300">View Details</span>
+                          <span className="relative z-10 text-blue-400 group-hover/link:text-white transition-all duration-200 group-hover/link:translate-x-1">→</span>
                           <div className="absolute inset-0 -top-40 bg-gradient-to-b from-white/20 to-transparent w-full h-full transform rotate-12 translate-x-[-100%] group-hover/link:translate-x-[100%] transition-transform duration-500"></div>
                         </Link>
                       </div>
@@ -392,8 +392,8 @@ export default function HomePage() {
               prefetch={true}
             >
               <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-              <Sparkles className="w-6 h-6 relative z-10 group-hover:rotate-12 transition-transform duration-300" aria-hidden="true" />
-              <span className="relative z-10 font-semibold tracking-wide">Sign Up Now</span>
+              <Sparkles className="w-6 h-6 relative z-10 text-white group-hover:rotate-12 transition-transform duration-300" aria-hidden="true" />
+              <span className="relative z-10 font-semibold tracking-wide text-white">Sign Up Now</span>
               <div className="absolute inset-0 -top-40 bg-gradient-to-b from-white/20 to-transparent w-full h-full transform rotate-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             </Link>
           </div>
@@ -423,8 +423,8 @@ export default function HomePage() {
             prefetch={true}
           >
             <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-            <Sparkles className="w-7 h-7 relative z-10 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" aria-hidden="true" />
-            <span className="relative z-10 font-bold tracking-wide">Sign Up Now</span>
+            <Sparkles className="w-7 h-7 relative z-10 text-white group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" aria-hidden="true" />
+            <span className="relative z-10 font-bold tracking-wide text-white">Sign Up Now</span>
             <div className="absolute inset-0 -top-40 bg-gradient-to-b from-white/20 to-transparent w-full h-full transform rotate-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
             <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
           </Link>

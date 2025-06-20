@@ -30,13 +30,22 @@ export default function DiscoverSelector({ children }: { children: React.ReactNo
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)',
-        color: '#1e293b',
+        background: 'var(--gradient-background)',
+        color: 'var(--foreground)',
         px: 4,
         py: 6
       }}
     >
-      <Typography variant="h4" sx={{ mb: 2, fontWeight: 'bold', color: '#4f46e5' }}>
+      <Typography 
+        variant="h4" 
+        sx={{ 
+          mb: 2, 
+          fontWeight: 700, 
+          background: 'var(--gradient-primary)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}
+      >
         Discover
       </Typography>
 
@@ -45,31 +54,73 @@ export default function DiscoverSelector({ children }: { children: React.ReactNo
         onChange={handleChange}
         variant="outlined"
         displayEmpty
+        className="dark-card"
         sx={{
           mb: 4,
-          backgroundColor: '#ffffff',
-          color: '#1e293b',
-          borderRadius: 2,
+          backgroundColor: 'var(--background-card)',
+          color: 'var(--foreground)',
+          borderRadius: '12px',
           minWidth: 280,
-          '.MuiOutlinedInput-notchedOutline': { borderColor: '#cbd5e1' },
-          '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#6366f1' },
-          '& .MuiSvgIcon-root': { color: '#4f46e5' },
+          '.MuiOutlinedInput-notchedOutline': { 
+            borderColor: 'var(--border)',
+          },
+          '&:hover .MuiOutlinedInput-notchedOutline': { 
+            borderColor: 'var(--primary)',
+          },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: 'var(--primary)',
+          },
+          '& .MuiSvgIcon-root': { 
+            color: 'var(--primary)',
+          },
+        }}
+        MenuProps={{
+          PaperProps: {
+            sx: {
+              backgroundColor: 'var(--background-card)',
+              border: '1px solid var(--border)',
+              borderRadius: '12px',
+              backdropFilter: 'blur(20px)',
+              boxShadow: 'var(--shadow-dark)',
+            }
+          }
         }}
         renderValue={(selected) => {
           if (!selected) {
-            return <span style={{ color: '#94a3b8' }}>Select...</span>
+            return <span style={{ color: 'var(--foreground-secondary)' }}>Select...</span>
           }
           const selectedOption = discoverOptions.find(opt => opt.value === selected)
           return selectedOption?.label || 'Select...'
         }}
       >
         {/* Empty option so "Select..." shows up initially */}
-        <MenuItem value="">
-          <em style={{ color: '#94a3b8' }}>Select...</em>
+        <MenuItem 
+          value=""
+          sx={{
+            color: 'var(--foreground-secondary)',
+            '&:hover': {
+              backgroundColor: 'rgba(0, 122, 255, 0.1)',
+            }
+          }}
+        >
+          <em>Select...</em>
         </MenuItem>
 
         {discoverOptions.map((opt) => (
-          <MenuItem key={opt.value} value={opt.value} sx={{ color: '#334155' }}>
+          <MenuItem 
+            key={opt.value} 
+            value={opt.value} 
+            sx={{ 
+              color: 'var(--foreground)',
+              '&:hover': {
+                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+              },
+              '&.Mui-selected': {
+                backgroundColor: 'var(--primary-light)',
+                color: 'var(--primary)',
+              }
+            }}
+          >
             {opt.label}
           </MenuItem>
         ))}

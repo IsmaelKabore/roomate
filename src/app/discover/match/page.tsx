@@ -69,15 +69,23 @@ export default function MatchesPage() {
 
   if (checkingAuth || !userId) {
     return (
-      <Box textAlign="center" mt={6}>
-        <CircularProgress />
+      <Box 
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'var(--gradient-background)',
+        }}
+      >
+        <CircularProgress sx={{ color: 'var(--primary)' }} />
       </Box>
     )
   }
 
   const handleSearch = async () => {
     if (!description.trim()) {
-      setError('Tell us what you’re looking for!')
+      setError('Tell us what you are looking for!')
       return
     }
     setError(null)
@@ -139,117 +147,342 @@ export default function MatchesPage() {
   }
 
   return (
-    <Box p={4} maxWidth={600} mx="auto">
-      <Typography variant="h4" gutterBottom>
-        Find {searchType === 'room' ? 'Rooms' : 'Roommates'}
-      </Typography>
-
-      {/* Type toggle */}
-      <ToggleButtonGroup
-        value={searchType}
-        exclusive
-        onChange={(_, v) => v && setSearchType(v)}
-        sx={{ mb: 3 }}
+    <Box 
+      sx={{
+        minHeight: '100vh',
+        background: 'var(--gradient-background)',
+        p: 4,
+        display: 'flex',
+        justifyContent: 'center',
+      }}
+    >
+      <Box
+        className="dark-card"
+        sx={{
+          maxWidth: 600,
+          width: '100%',
+          p: 4,
+          borderRadius: '16px',
+          height: 'fit-content',
+        }}
       >
-        <ToggleButton value="room">Room</ToggleButton>
-        <ToggleButton value="roommate">Roommate</ToggleButton>
-      </ToggleButtonGroup>
+        <Typography 
+          variant="h4" 
+          sx={{
+            mb: 4,
+            color: 'var(--foreground)',
+            fontWeight: 700,
+            textAlign: 'center',
+            background: 'var(--gradient-primary)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          Find {searchType === 'room' ? 'Rooms' : 'Roommates'}
+        </Typography>
 
-      {/* Free‐text */}
-      <TextField
-        label="Describe what you’re looking for…"
-        fullWidth
-        multiline
-        rows={3}
-        value={description}
-        onChange={e => setDescription(e.target.value)}
-        sx={{ mb: 3 }}
-      />
-
-      {/* Budget slider (manual fallback) */}
-      <Typography gutterBottom>
-        Budget (${budget[0]} – ${budget[1]})
-      </Typography>
-      <Slider
-        value={budget}
-        onChange={(_, v) => setBudget(v as [number, number])}
-        min={0}
-        max={5000}
-        valueLabelDisplay="auto"
-        sx={{ mb: 3 }}
-      />
-
-      {/* Room‐specific manual controls */}
-      {searchType === 'room' && (
-        <>
-          <TextField
-            select
-            label="Bedrooms"
-            fullWidth
-            value={bedrooms}
-            onChange={e => setBedrooms(Number(e.target.value))}
-            sx={{ mb: 3 }}
-          >
-            {[1, 2, 3, 4].map(n => (
-              <MenuItem key={n} value={n}>{n}</MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Bathrooms"
-            fullWidth
-            value={bathrooms}
-            onChange={e => setBathrooms(Number(e.target.value))}
-            sx={{ mb: 3 }}
-          >
-            {[1, 2, 3].map(n => (
-              <MenuItem key={n} value={n}>{n}</MenuItem>
-            ))}
-          </TextField>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={furnished}
-                onChange={e => setFurnished(e.target.checked)}
-              />
+        {/* Type toggle */}
+        <ToggleButtonGroup
+          value={searchType}
+          exclusive
+          onChange={(_, v) => v && setSearchType(v)}
+          sx={{ 
+            mb: 3,
+            '& .MuiToggleButton-root': {
+              color: 'var(--foreground-secondary)',
+              borderColor: 'var(--border)',
+              '&.Mui-selected': {
+                backgroundColor: 'var(--primary)',
+                color: 'var(--foreground)',
+                '&:hover': {
+                  backgroundColor: 'var(--primary-hover)',
+                }
+              },
+              '&:hover': {
+                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+              }
             }
-            label="Furnished"
-            sx={{ mb: 3 }}
-          />
-        </>
-      )}
+          }}
+        >
+          <ToggleButton value="room">Room</ToggleButton>
+          <ToggleButton value="roommate">Roommate</ToggleButton>
+        </ToggleButtonGroup>
 
-      <Button
-        variant="contained"
-        fullWidth
-        onClick={handleSearch}
-        disabled={isSearching}
-        sx={{ mb: 3 }}
-      >
-        {isSearching ? 'Searching…' : 'Find Matches'}
-      </Button>
+        {/* Free‐text */}
+        <TextField
+          label="Describe what you're looking for…"
+          fullWidth
+          multiline
+          rows={3}
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          sx={{ 
+            mb: 3,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'var(--background-secondary)',
+              color: 'var(--foreground)',
+              '& fieldset': {
+                borderColor: 'var(--border)',
+              },
+              '&:hover fieldset': {
+                borderColor: 'var(--primary)',
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: 'var(--primary)',
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: 'var(--foreground-secondary)',
+              '&.Mui-focused': {
+                color: 'var(--primary)',
+              }
+            }
+          }}
+        />
 
-      {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
+        {/* Budget slider (manual fallback) */}
+        <Typography 
+          sx={{ 
+            mb: 2,
+            color: 'var(--foreground)',
+            fontWeight: 600,
+          }}
+        >
+          Budget (${budget[0]} – ${budget[1]})
+        </Typography>
+        <Slider
+          value={budget}
+          onChange={(_, v) => setBudget(v as [number, number])}
+          min={0}
+          max={5000}
+          valueLabelDisplay="auto"
+          sx={{ 
+            mb: 3,
+            color: 'var(--primary)',
+            '& .MuiSlider-thumb': {
+              backgroundColor: 'var(--primary)',
+              boxShadow: 'var(--shadow-blue)',
+              '&:hover': {
+                boxShadow: 'var(--glow-blue)',
+              }
+            },
+            '& .MuiSlider-track': {
+              backgroundColor: 'var(--primary)',
+            },
+            '& .MuiSlider-rail': {
+              backgroundColor: 'var(--border)',
+            }
+          }}
+        />
 
-      {matches.length > 0 && (
-        <List>
-          {matches.map(m => (
-            <React.Fragment key={m.id}>
-              <ListItem alignItems="flex-start">
-                <ListItemText
-                  primary={m.title}
-                  secondary={
-                    m.type === 'room'
-                      ? `$${m.price}/mo — ${m.description.slice(0, 80)}…`
-                      : `Roommate — ${m.description.slice(0, 80)}…`
+        {/* Room‐specific manual controls */}
+        {searchType === 'room' && (
+          <>
+            <TextField
+              select
+              label="Bedrooms"
+              fullWidth
+              value={bedrooms}
+              onChange={e => setBedrooms(Number(e.target.value))}
+              SelectProps={{
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: 'var(--background-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      '& .MuiMenuItem-root': {
+                        color: 'var(--foreground)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        }
+                      }
+                    }
                   }
+                }
+              }}
+              sx={{ 
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'var(--background-secondary)',
+                  color: 'var(--foreground)',
+                  '& fieldset': {
+                    borderColor: 'var(--border)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'var(--primary)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--primary)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'var(--foreground-secondary)',
+                  '&.Mui-focused': {
+                    color: 'var(--primary)',
+                  }
+                },
+                '& .MuiSvgIcon-root': {
+                  color: 'var(--primary)',
+                }
+              }}
+            >
+              {[1, 2, 3, 4].map(n => (
+                <MenuItem key={n} value={n}>{n}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Bathrooms"
+              fullWidth
+              value={bathrooms}
+              onChange={e => setBathrooms(Number(e.target.value))}
+              SelectProps={{
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      backgroundColor: 'var(--background-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '12px',
+                      '& .MuiMenuItem-root': {
+                        color: 'var(--foreground)',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        }
+                      }
+                    }
+                  }
+                }
+              }}
+              sx={{ 
+                mb: 3,
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: 'var(--background-secondary)',
+                  color: 'var(--foreground)',
+                  '& fieldset': {
+                    borderColor: 'var(--border)',
+                  },
+                  '&:hover fieldset': {
+                    borderColor: 'var(--primary)',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: 'var(--primary)',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: 'var(--foreground-secondary)',
+                  '&.Mui-focused': {
+                    color: 'var(--primary)',
+                  }
+                },
+                '& .MuiSvgIcon-root': {
+                  color: 'var(--primary)',
+                }
+              }}
+            >
+              {[1, 2, 3].map(n => (
+                <MenuItem key={n} value={n}>{n}</MenuItem>
+              ))}
+            </TextField>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={furnished}
+                  onChange={e => setFurnished(e.target.checked)}
+                  sx={{
+                    color: 'var(--foreground-secondary)',
+                    '&.Mui-checked': {
+                      color: 'var(--primary)',
+                    }
+                  }}
                 />
-              </ListItem>
-              <Divider component="li" />
-            </React.Fragment>
-          ))}
-        </List>
-      )}
+              }
+              label="Furnished"
+              sx={{ 
+                mb: 3,
+                color: 'var(--foreground)',
+              }}
+            />
+          </>
+        )}
+
+        <Button
+          variant="contained"
+          fullWidth
+          onClick={handleSearch}
+          disabled={isSearching}
+          className="btn-primary"
+          sx={{
+            mb: 3,
+            py: 1.5,
+            fontSize: '1.1rem',
+            fontWeight: 600,
+            textTransform: 'none',
+            borderRadius: '12px',
+          }}
+        >
+          {isSearching ? (
+            <>
+              <CircularProgress size={20} sx={{ mr: 1, color: 'inherit' }} />
+              Searching…
+            </>
+          ) : (
+            '🔍 Find Matches'
+          )}
+        </Button>
+
+        {error && (
+          <Typography 
+            sx={{ 
+              mb: 2,
+              color: '#ef4444',
+              textAlign: 'center',
+              fontWeight: 500,
+            }}
+          >
+            {error}
+          </Typography>
+        )}
+
+        {matches.length > 0 && (
+          <Box
+            className="dark-card"
+            sx={{
+              borderRadius: '12px',
+              overflow: 'hidden',
+            }}
+          >
+            <List>
+              {matches.map(m => (
+                <React.Fragment key={m.id}>
+                  <ListItem alignItems="flex-start">
+                    <ListItemText
+                      primary={
+                        <Typography sx={{ color: 'var(--foreground)', fontWeight: 600 }}>
+                          {m.title}
+                        </Typography>
+                      }
+                      secondary={
+                        <Typography sx={{ color: 'var(--foreground-secondary)' }}>
+                          {m.type === 'room'
+                            ? `$${m.price}/mo — ${m.description.slice(0, 80)}…`
+                            : `Roommate — ${m.description.slice(0, 80)}…`}
+                        </Typography>
+                      }
+                    />
+                  </ListItem>
+                  <Divider 
+                    component="li" 
+                    sx={{ 
+                      borderColor: 'var(--border)',
+                    }}
+                  />
+                </React.Fragment>
+              ))}
+            </List>
+          </Box>
+        )}
+      </Box>
     </Box>
   )
 }

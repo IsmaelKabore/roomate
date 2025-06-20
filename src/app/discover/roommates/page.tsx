@@ -45,19 +45,20 @@ function Carousel({ images }: { images: string[] }) {
       <Box
         sx={{
           height: 300,
-          backgroundColor: '#e0e0e0',
+          backgroundColor: 'var(--background-secondary)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          borderRadius: '12px 12px 0 0',
         }}
       >
-        <Typography>No Image</Typography>
+        <Typography sx={{ color: 'var(--foreground-secondary)' }}>No Image</Typography>
       </Box>
     )
   }
 
   return (
-    <Box sx={{ position: 'relative', height: 300, overflow: 'hidden' }}>
+    <Box sx={{ position: 'relative', height: 300, overflow: 'hidden', borderRadius: '12px 12px 0 0' }}>
       <Box
         component="img"
         src={images[current]}
@@ -77,10 +78,16 @@ function Carousel({ images }: { images: string[] }) {
               top: '50%',
               left: 8,
               transform: 'translateY(-50%)',
-              backgroundColor: 'rgba(255,255,255,0.7)',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              color: '#ffffff',
               minWidth: '32px',
               p: 0.5,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
+              borderRadius: '50%',
+              '&:hover': { 
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                transform: 'translateY(-50%) scale(1.1)',
+              },
+              transition: 'all 0.2s ease',
             }}
             size="small"
           >
@@ -93,10 +100,16 @@ function Carousel({ images }: { images: string[] }) {
               top: '50%',
               right: 8,
               transform: 'translateY(-50%)',
-              backgroundColor: 'rgba(255,255,255,0.7)',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              color: '#ffffff',
               minWidth: '32px',
               p: 0.5,
-              '&:hover': { backgroundColor: 'rgba(255,255,255,0.9)' },
+              borderRadius: '50%',
+              '&:hover': { 
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                transform: 'translateY(-50%) scale(1.1)',
+              },
+              transition: 'all 0.2s ease',
             }}
             size="small"
           >
@@ -158,8 +171,16 @@ export default function RoommatesPage() {
 
   if (loading) {
     return (
-      <Box sx={{ textAlign: 'center', mt: 6 }}>
-        <CircularProgress />
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'var(--gradient-background)',
+        }}
+      >
+        <CircularProgress sx={{ color: 'var(--primary)' }} />
       </Box>
     )
   }
@@ -178,7 +199,7 @@ export default function RoommatesPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(to bottom right, #f8fafc, #e2e8f0)',
+        background: 'var(--gradient-background)',
         px: 4,
         py: 6,
         display: 'flex',
@@ -189,31 +210,53 @@ export default function RoommatesPage() {
       }}
     >
       {posts.length === 0 ? (
-        <Typography>No roommate posts found.</Typography>
+        <Typography sx={{ color: 'var(--foreground-secondary)', textAlign: 'center', fontSize: '1.2rem' }}>
+          No roommate posts found.
+        </Typography>
       ) : (
         <>
           {paginatedPosts.map((person) => (
             <Card
               key={person.id}
+              className="dark-card scale-on-hover"
               sx={{
-                backgroundColor: '#fff',
-                border: '1px solid #cbd5e1',
-                borderRadius: 4,
+                backgroundColor: 'var(--background-card)',
+                border: '1px solid var(--border)',
+                borderRadius: '16px',
                 overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                transition: 'transform 0.3s ease',
+                transition: 'all 0.3s ease',
                 '&:hover': {
-                  transform: 'translateY(-6px)',
-                  boxShadow: '0 8px 20px rgba(100,116,139,0.2)',
-                },
+                  transform: 'translateY(-8px)',
+                  boxShadow: 'var(--shadow-blue-hover)',
+                  border: '1px solid var(--primary)',
+                }
               }}
             >
               <CardHeader
                 avatar={
                   <Avatar
-                    src={person.profile?.profilePicture}
-                    alt={person.profile?.name || 'User'}
-                    sx={{ cursor: 'pointer' }}
+                    src={person.profile?.profilePicture || ''}
+                    sx={{
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--foreground)',
+                      border: '2px solid var(--border)',
+                    }}
+                  >
+                    {person.profile?.name?.[0] || '?'}
+                  </Avatar>
+                }
+                title={
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: 'var(--foreground)',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        color: 'var(--primary)',
+                      },
+                      transition: 'color 0.2s ease',
+                    }}
                     onClick={() => {
                       if (!auth.currentUser) {
                         alert('You must be logged in to view profiles.')
@@ -221,76 +264,114 @@ export default function RoommatesPage() {
                         router.push(`/profile/${person.userId}`)
                       }
                     }}
-                  />
+                  >
+                    {person.profile?.name || 'Unknown User'}
+                  </Typography>
                 }
-                title={
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{ cursor: 'pointer', fontWeight: 600 }}
-                      onClick={() => {
-                        if (!auth.currentUser) {
-                          alert('You must be logged in to view profiles.')
-                        } else {
-                          router.push(`/profile/${person.userId}`)
-                        }
+                subheader={
+                  <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                    {(person.profile?.traits || []).slice(0, 3).join(' • ') || 'No traits listed'}
+                  </Typography>
+                }
+                action={
+                  auth.currentUser && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => router.push(`/profile/${person.userId}`)}
+                      sx={{
+                        color: 'var(--primary)',
+                        borderColor: 'var(--primary)',
+                        '&:hover': {
+                          backgroundColor: 'var(--primary)',
+                          color: 'var(--foreground)',
+                        },
+                        textTransform: 'none',
+                        fontWeight: 500,
                       }}
                     >
-                      {person.profile?.name || 'Unknown User'}
-                    </Typography>
-                    {auth.currentUser && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => router.push(`/profile/${person.userId}`)}
-                        sx={{ textTransform: 'none' }}
-                      >
-                        View Profile
-                      </Button>
-                    )}
-                  </Box>
+                      View Profile
+                    </Button>
+                  )
                 }
-                subheader={(person.profile?.traits || []).slice(0, 2).join(', ')}
+                sx={{
+                  backgroundColor: 'var(--background-secondary)',
+                  borderBottom: '1px solid var(--border)',
+                }}
               />
 
               <Carousel images={person.images} />
 
-              <CardContent>
-                <Typography sx={{ fontSize: '0.9rem' }}>{person.description}</Typography>
-                <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: 'var(--foreground)',
+                    fontWeight: 600,
+                    mb: 2,
+                  }}
+                >
+                  {person.title}
+                </Typography>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'var(--foreground-secondary)',
+                    lineHeight: 1.6,
+                    mb: 3,
+                  }}
+                >
+                  {person.description}
+                </Typography>
+
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                   <Button
-                    variant="outlined"
-                    size="small"
+                    variant="contained"
                     startIcon={<ChatIcon />}
                     onClick={() => handleChat(person)}
+                    className="btn-primary"
                     sx={{
-                      color: '#4f46e5',
-                      borderColor: '#4f46e5',
-                      fontWeight: 'bold',
                       textTransform: 'none',
-                      '&:hover': {
-                        borderColor: '#6366f1',
-                        backgroundColor: '#eef2ff',
-                      },
+                      fontWeight: 600,
+                      borderRadius: '12px',
+                      px: 3,
                     }}
                   >
-                    Contact
+                    Chat
                   </Button>
                 </Box>
               </CardContent>
             </Card>
           ))}
 
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={handlePageChange}
-                color="primary"
-              />
-            </Box>
-          )}
+          {/* Pagination */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <Pagination
+              count={totalPages}
+              page={page}
+              onChange={handlePageChange}
+              color="primary"
+              size="large"
+              sx={{
+                '& .MuiPaginationItem-root': {
+                  color: 'var(--foreground-secondary)',
+                  borderColor: 'var(--border)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                    color: 'var(--primary)',
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: 'var(--primary)',
+                    color: 'var(--foreground)',
+                    '&:hover': {
+                      backgroundColor: 'var(--primary-hover)',
+                    }
+                  }
+                }
+              }}
+            />
+          </Box>
         </>
       )}
     </Box>

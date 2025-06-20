@@ -54,15 +54,15 @@ function Carousel({ images }: { images: string[] }) {
       <Box
         sx={{
           flexBasis: '70%',
-          background: 'linear-gradient(135deg, #E0F2FE, #FFFFFF)',
+          background: 'var(--background-secondary)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderTopLeftRadius: 8,
-          borderTopRightRadius: 8,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
         }}
       >
-        <Typography sx={{ color: '#475569' }}>No Image</Typography>
+        <Typography sx={{ color: 'var(--foreground-secondary)' }}>No Image</Typography>
       </Box>
     )
   }
@@ -73,8 +73,8 @@ function Carousel({ images }: { images: string[] }) {
         position: 'relative',
         flexBasis: '70%',
         overflow: 'hidden',
-        borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
       }}
     >
       <Box
@@ -96,11 +96,15 @@ function Carousel({ images }: { images: string[] }) {
               top: '50%',
               left: 12,
               transform: 'translateY(-50%)',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              color: '#FFFFFF',
-              width: 36,
-              height: 36,
-              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              color: 'var(--foreground)',
+              width: 40,
+              height: 40,
+              '&:hover': { 
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                transform: 'translateY(-50%) scale(1.1)',
+              },
+              transition: 'all 0.2s ease',
             }}
             size="small"
           >
@@ -113,11 +117,15 @@ function Carousel({ images }: { images: string[] }) {
               top: '50%',
               right: 12,
               transform: 'translateY(-50%)',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              color: '#FFFFFF',
-              width: 36,
-              height: 36,
-              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              color: 'var(--foreground)',
+              width: 40,
+              height: 40,
+              '&:hover': { 
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                transform: 'translateY(-50%) scale(1.1)',
+              },
+              transition: 'all 0.2s ease',
             }}
             size="small"
           >
@@ -202,51 +210,42 @@ export default function RoomsPage() {
 
   if (loading) {
     return (
-      <Box
-        sx={{
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '80vh',
-          background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #2d3748 100%)',
+          background: 'var(--gradient-background)',
         }}
       >
-        <CircularProgress sx={{ color: '#007AFF' }} />
+        <CircularProgress sx={{ color: 'var(--primary)' }} />
       </Box>
     )
   }
 
-  // Apply both filters: price + address substring (case‐insensitive)
-  const filteredRooms = rooms.filter((r) => {
-    // ALLOW posts with no price (undefined) OR those whose price falls within the slider range
-    const priceOK =
-      typeof r.price !== 'number' ||
-      (r.price >= priceRange[0] && r.price <= priceRange[1])
-
-    const addressOK =
-      addressFilter.trim() === ''
-        ? true
-        : r.address
-        ? r.address.toLowerCase().includes(addressFilter.trim().toLowerCase())
-        : false
-
-    return priceOK && addressOK
+  // Filter rooms based on price range and address
+  const filteredRooms = rooms.filter((room) => {
+    const roomPrice = room.price || 0
+    const matchesPrice = roomPrice >= priceRange[0] && roomPrice <= priceRange[1]
+    const matchesAddress = addressFilter
+      ? room.address?.toLowerCase().includes(addressFilter.toLowerCase())
+      : true
+    return matchesPrice && matchesAddress
   })
 
-  // Pagination calculations
+  // Group by location
+  const groupedByLocation = filteredRooms.reduce((acc, room) => {
+    const location = room.locationLabel || 'Other'
+    if (!acc[location]) acc[location] = []
+    acc[location].push(room)
+    return acc
+  }, {} as Record<string, RoomPost[]>)
+
+  // Calculate pagination
   const totalPages = Math.ceil(filteredRooms.length / itemsPerPage)
-  const paginatedRooms = filteredRooms.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  )
-
-  // Group by locationLabel
-  const groupedByLocation: Record<string, RoomPost[]> = {}
-  paginatedRooms.forEach((r) => {
-    const key = r.locationLabel || 'Other'
-    if (!groupedByLocation[key]) groupedByLocation[key] = []
-    groupedByLocation[key].push(r)
-  })
+  const startIdx = (page - 1) * itemsPerPage
+  const paginatedRooms = filteredRooms.slice(startIdx, startIdx + itemsPerPage)
 
   const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
     setPage(value)
@@ -259,20 +258,21 @@ export default function RoomsPage() {
         display: 'flex',
         width: '100%',
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #2d3748 100%)',
+        background: 'var(--gradient-background)',
       }}
     >
       {/* ==========================
             1) Left Sidebar (Filters)
          ========================== */}
       <Box
+        className="dark-card"
         sx={{
           width: { xs: '100%', sm: 300 },
           flexShrink: 0,
-          background: 'rgba(30, 40, 53, 0.9)',
+          background: 'var(--background-card)',
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          color: '#FFFFFF',
+          border: '1px solid var(--border)',
+          color: 'var(--foreground)',
           px: 3,
           py: 4,
           display: 'flex',
@@ -282,7 +282,18 @@ export default function RoomsPage() {
           boxSizing: 'border-box',
         }}
       >
-        <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, letterSpacing: 1 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            mb: 1, 
+            fontWeight: 700, 
+            letterSpacing: 1,
+            color: 'var(--foreground)',
+            background: 'var(--gradient-primary)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
           Filters
         </Typography>
 
@@ -295,31 +306,38 @@ export default function RoomsPage() {
           onChange={(e) => setAddressFilter(e.target.value)}
           sx={{
             '& .MuiOutlinedInput-root': {
-              backgroundColor: 'rgba(45, 55, 72, 0.5)',
-              color: '#ffffff',
+              backgroundColor: 'var(--background-secondary)',
+              color: 'var(--foreground)',
               borderRadius: '12px',
               '& fieldset': {
-                borderColor: 'rgba(255, 255, 255, 0.2)',
+                borderColor: 'var(--border)',
               },
               '&:hover fieldset': {
-                borderColor: 'rgba(0, 122, 255, 0.5)',
+                borderColor: 'var(--primary)',
               },
               '&.Mui-focused fieldset': {
-                borderColor: '#007AFF',
+                borderColor: 'var(--primary)',
               },
             },
             '& .MuiInputLabel-root': {
-              color: '#a0aec0',
-            },
-            '& .MuiInputLabel-root.Mui-focused': {
-              color: '#007AFF',
+              color: 'var(--foreground-secondary)',
+              '&.Mui-focused': {
+                color: 'var(--primary)',
+              }
             },
           }}
         />
 
         {/* Price Range Slider */}
         <Box>
-          <Typography variant="subtitle2" sx={{ color: '#CBD5E1', mb: 1 }}>
+          <Typography 
+            variant="subtitle2" 
+            sx={{ 
+              color: 'var(--foreground)', 
+              mb: 1, 
+              fontWeight: 600 
+            }}
+          >
             Price Range
           </Typography>
           <Slider
@@ -331,25 +349,28 @@ export default function RoomsPage() {
             min={minPrice}
             max={maxPrice}
             sx={{
-              color: '#007AFF',
+              color: 'var(--primary)',
               '& .MuiSlider-thumb': {
-                backgroundColor: '#FFFFFF',
-                border: '2px solid #007AFF',
-                boxShadow: '0 2px 8px rgba(0, 122, 255, 0.3)',
+                backgroundColor: 'var(--foreground)',
+                border: '2px solid var(--primary)',
+                boxShadow: 'var(--shadow-blue)',
+                '&:hover': {
+                  boxShadow: 'var(--glow-blue)',
+                }
               },
               '& .MuiSlider-track': {
-                backgroundColor: '#007AFF',
+                backgroundColor: 'var(--primary)',
               },
               '& .MuiSlider-rail': {
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'var(--border)',
               },
             }}
           />
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-            <Typography sx={{ fontSize: '0.875rem', color: '#CBD5E1', fontWeight: 500 }}>
+            <Typography sx={{ fontSize: '0.875rem', color: 'var(--foreground-secondary)', fontWeight: 500 }}>
               ${priceRange[0].toLocaleString()}
             </Typography>
-            <Typography sx={{ fontSize: '0.875rem', color: '#CBD5E1', fontWeight: 500 }}>
+            <Typography sx={{ fontSize: '0.875rem', color: 'var(--foreground-secondary)', fontWeight: 500 }}>
               ${priceRange[1].toLocaleString()}
             </Typography>
           </Box>
@@ -358,21 +379,13 @@ export default function RoomsPage() {
         {/* Apply Button */}
         <Button
           variant="contained"
+          className="btn-primary"
           sx={{
             mt: 'auto',
-            background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
-            color: '#FFFFFF',
             textTransform: 'none',
             fontWeight: 700,
             borderRadius: '12px',
             padding: '12px 24px',
-            boxShadow: '0 4px 15px rgba(0, 122, 255, 0.3)',
-            '&:hover': { 
-              background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
-              transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(0, 122, 255, 0.4)'
-            },
-            transition: 'all 0.3s ease'
           }}
           onClick={() => {
             // Real-time filtering, so no extra logic
@@ -393,231 +406,294 @@ export default function RoomsPage() {
           overflowY: 'auto',
         }}
       >
-        {Object.entries(groupedByLocation).map(([location, roomsInLocation]) => (
-          <Box key={location} sx={{ mb: 4 }}>
-            <Typography
-              variant="h5"
-              sx={{
-                mb: 2,
-                fontWeight: 700,
-                color: '#1E40AF',
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              {location}
+        {Object.keys(groupedByLocation).length === 0 ? (
+          <Box sx={{ textAlign: 'center', mt: 8 }}>
+            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '1.2rem' }}>
+              No rooms found matching your criteria.
             </Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: '1fr',
-                  md: '1fr',
-                },
-                gap: 4,
-              }}
-            >
-              {roomsInLocation.map((room) => (
-                <Card
-                  key={room.id}
+          </Box>
+        ) : (
+          <>
+            {Object.entries(groupedByLocation).map(([location, roomsInLocation]) => (
+              <Box key={location} sx={{ mb: 4 }}>
+                <Typography
+                  variant="h5"
                   sx={{
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 20px rgba(100,116,139,0.15)',
-                    },
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: 620,
+                    mb: 2,
+                    fontWeight: 700,
+                    color: 'var(--primary)',
+                    letterSpacing: 0.5,
+                    textTransform: 'uppercase',
                   }}
                 >
-                  {/* --- Profile Header --- */}
-                  <CardHeader
-                    avatar={
-                      <Avatar
-                        src={room.profile?.profilePicture}
-                        alt={room.profile?.name || 'User'}
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => {
-                          if (!auth.currentUser) {
-                            alert('You must be logged in to view profiles.')
-                          } else {
-                            router.push(`/profile/${room.userId}`)
-                          }
+                  {location}
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: '1fr',
+                      md: '1fr',
+                    },
+                    gap: 4,
+                  }}
+                >
+                  {roomsInLocation.map((room) => (
+                    <Card
+                      key={room.id}
+                      className="dark-card scale-on-hover"
+                      sx={{
+                        backgroundColor: 'var(--background-card)',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        boxShadow: 'var(--shadow-dark)',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          transform: 'translateY(-8px)',
+                          boxShadow: 'var(--shadow-blue-hover)',
+                          border: '1px solid var(--primary)',
+                        },
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: 620,
+                      }}
+                    >
+                      {/* --- Profile Header --- */}
+                      <CardHeader
+                        avatar={
+                          <Avatar
+                            src={room.profile?.profilePicture || ''}
+                            sx={{ 
+                              cursor: 'pointer',
+                              backgroundColor: 'var(--primary)',
+                              color: 'var(--foreground)',
+                              border: '2px solid var(--border)',
+                            }}
+                            onClick={() => {
+                              if (!auth.currentUser) {
+                                alert('You must be logged in to view profiles.')
+                              } else {
+                                router.push(`/profile/${room.userId}`)
+                              }
+                            }}
+                          >
+                            {room.profile?.name?.[0] || '?'}
+                          </Avatar>
+                        }
+                        title={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{ 
+                                cursor: 'pointer', 
+                                fontWeight: 600,
+                                color: 'var(--foreground)',
+                                '&:hover': {
+                                  color: 'var(--primary)',
+                                },
+                                transition: 'color 0.2s ease',
+                              }}
+                              onClick={() => {
+                                if (!auth.currentUser) {
+                                  alert('You must be logged in to view profiles.')
+                                } else {
+                                  router.push(`/profile/${room.userId}`)
+                                }
+                              }}
+                            >
+                              {room.profile?.name || 'Unknown User'}
+                            </Typography>
+                            {auth.currentUser && (
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() => router.push(`/profile/${room.userId}`)}
+                                sx={{ 
+                                  textTransform: 'none',
+                                  color: 'var(--primary)',
+                                  borderColor: 'var(--primary)',
+                                  '&:hover': {
+                                    backgroundColor: 'var(--primary)',
+                                    color: 'var(--foreground)',
+                                  }
+                                }}
+                              >
+                                View Profile
+                              </Button>
+                            )}
+                          </Box>
+                        }
+                        subheader={
+                          <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                            {(room.profile?.traits || []).slice(0, 2).join(', ') || 'No traits listed'}
+                          </Typography>
+                        }
+                        sx={{ 
+                          px: 2, 
+                          py: 1,
+                          backgroundColor: 'var(--background-secondary)',
+                          borderBottom: '1px solid var(--border)',
                         }}
                       />
-                    }
-                    title={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ cursor: 'pointer', fontWeight: 600 }}
-                          onClick={() => {
-                            if (!auth.currentUser) {
-                              alert('You must be logged in to view profiles.')
-                            } else {
-                              router.push(`/profile/${room.userId}`)
-                            }
-                          }}
-                        >
-                          {room.profile?.name || 'Unknown User'}
-                        </Typography>
-                        {auth.currentUser && (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => router.push(`/profile/${room.userId}`)}
-                            sx={{ textTransform: 'none' }}
-                          >
-                            View Profile
-                          </Button>
-                        )}
-                      </Box>
-                    }
-                    subheader={(room.profile?.traits || []).slice(0, 2).join(', ')}
-                    sx={{ px: 2, py: 1 }}
-                  />
 
-                  {/* --- Image Carousel --- */}
-                  <Carousel images={room.images} />
+                      {/* --- Image Carousel --- */}
+                      <Carousel images={room.images} />
 
-                  {/* --- Content Area --- */}
-                  <CardContent
-                    sx={{
-                      flexBasis: '30%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      px: 3,
-                      py: 2,
-                    }}
-                  >
-                    <Box>
-                      <Typography
-                        variant="h6"
+                      {/* --- Content Area --- */}
+                      <CardContent
                         sx={{
-                          fontWeight: 700,
-                          mb: 0.5,
-                          color: '#1E40AF',
-                          letterSpacing: 0.5,
-                          lineHeight: 1.2,
-                          maxHeight: '2.8em',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          display: '-webkit-box',
-                        }}
-                      >
-                        {room.title}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          mb: 0.5,
-                          color: '#334155',
-                          fontStyle: 'italic',
-                          lineHeight: 1.3,
-                          maxHeight: '3.9em',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          display: '-webkit-box',
-                        }}
-                      >
-                        {room.description}
-                      </Typography>
-                      {room.address && (
-                        <Typography
-                          sx={{
-                            fontSize: '0.875rem',
-                            color: '#64748B',
-                            mb: 1,
-                            fontWeight: 500,
-                          }}
-                        >
-                          {room.address}
-                        </Typography>
-                      )}
-                    </Box>
-
-                    <Box>
-                      <Box
-                        sx={{
+                          flexGrow: 1,
                           display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          mb: 1,
+                          flexDirection: 'column',
+                          p: 3,
                         }}
                       >
-                        {typeof room.price === 'number' && (
-                          <Typography sx={{ color: '#3B82F6', fontWeight: 700 }}>
-                            ${room.price.toLocaleString()}/mo
+                        <Box sx={{ mb: 2 }}>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: 700,
+                              color: 'var(--foreground)',
+                              mb: 1,
+                            }}
+                          >
+                            {room.title}
                           </Typography>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          {room.bedrooms != null && (
-                            <Typography sx={{ fontSize: '0.875rem', color: '#4B5563' }}>
-                              🛏 {room.bedrooms}
-                            </Typography>
-                          )}
-                          {room.bathrooms != null && (
-                            <Typography sx={{ fontSize: '0.875rem', color: '#4B5563' }}>
-                              🛁 {room.bathrooms}
-                            </Typography>
-                          )}
-                          {room.sqft != null && (
-                            <Typography sx={{ fontSize: '0.875rem', color: '#4B5563' }}>
-                              📐 {room.sqft} sqft
-                            </Typography>
-                          )}
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'var(--foreground-secondary)',
+                              lineHeight: 1.6,
+                              mb: 2,
+                            }}
+                          >
+                            {room.description}
+                          </Typography>
                         </Box>
-                      </Box>
 
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button
-                          size="small"
-                          startIcon={<ChatIcon />}
-                          onClick={() => handleChat(room)}
-                          sx={{
-                            color: '#FFFFFF',
-                            bgcolor: '#3B82F6',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
-                            '&:hover': {
-                              bgcolor: '#2563EB',
-                              boxShadow: '0 6px 18px rgba(59,130,246,0.4)',
-                            },
-                          }}
-                        >
-                          Contact
-                        </Button>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
+                        {/* Room Details */}
+                        <Box sx={{ mb: 2 }}>
+                          <Typography
+                            variant="h5"
+                            sx={{
+                              fontWeight: 700,
+                              color: 'var(--primary)',
+                              mb: 1,
+                            }}
+                          >
+                            ${room.price?.toLocaleString() || 'N/A'}/month
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'var(--foreground-secondary)',
+                              mb: 1,
+                            }}
+                          >
+                            📍 {room.address || 'Address not provided'}
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            {room.bedrooms && (
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: 'var(--foreground-secondary)',
+                                  backgroundColor: 'var(--background-secondary)',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: '8px',
+                                  fontSize: '0.8rem',
+                                }}
+                              >
+                                🛏️ {room.bedrooms} bed{room.bedrooms > 1 ? 's' : ''}
+                              </Typography>
+                            )}
+                            {room.bathrooms && (
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: 'var(--foreground-secondary)',
+                                  backgroundColor: 'var(--background-secondary)',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: '8px',
+                                  fontSize: '0.8rem',
+                                }}
+                              >
+                                🚿 {room.bathrooms} bath{room.bathrooms > 1 ? 's' : ''}
+                              </Typography>
+                            )}
+                            {room.sqft && (
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: 'var(--foreground-secondary)',
+                                  backgroundColor: 'var(--background-secondary)',
+                                  px: 1.5,
+                                  py: 0.5,
+                                  borderRadius: '8px',
+                                  fontSize: '0.8rem',
+                                }}
+                              >
+                                📐 {room.sqft} sqft
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+
+                        {/* Action Button */}
+                        <Box sx={{ mt: 'auto', textAlign: 'right' }}>
+                          <Button
+                            variant="contained"
+                            startIcon={<ChatIcon />}
+                            onClick={() => handleChat(room)}
+                            className="btn-primary"
+                            sx={{
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              borderRadius: '12px',
+                              px: 3,
+                            }}
+                          >
+                            Contact
+                          </Button>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </Box>
+              </Box>
+            ))}
+
+            {/* Pagination */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+                sx={{
+                  '& .MuiPaginationItem-root': {
+                    color: 'var(--foreground-secondary)',
+                    borderColor: 'var(--border)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                      color: 'var(--primary)',
+                    },
+                    '&.Mui-selected': {
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--foreground)',
+                      '&:hover': {
+                        backgroundColor: 'var(--primary-hover)',
+                      }
+                    }
+                  }
+                }}
+              />
             </Box>
-          </Box>
-        ))}
-
-        {/* ============ Pagination Controls ============ */}
-        {totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <Pagination
-              count={totalPages}
-              page={page}
-              onChange={handlePageChange}
-              color="primary"
-            />
-          </Box>
+          </>
         )}
       </Box>
     </Box>
