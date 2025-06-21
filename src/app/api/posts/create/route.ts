@@ -14,6 +14,7 @@ const db = admin.firestore()
 
 export async function POST(req: Request) {
   try {
+    const body = await req.json()
     const {
       title,
       description,
@@ -26,7 +27,12 @@ export async function POST(req: Request) {
       bedrooms,
       bathrooms,
       furnished,
-    } = await req.json()
+    } = body
+
+    // coerce price to number
+    const priceNum = type === 'room'
+      ? Number(price)
+      : null
 
     // validate
     if (
@@ -34,10 +40,16 @@ export async function POST(req: Request) {
       !Array.isArray(images) || images.length === 0 ||
       !Array.isArray(keywords) || keywords.length === 0 ||
       typeof description !== 'string' ||
-      (type === 'room' && (!title?.trim() || !address?.trim() || typeof price !== 'number' ||
-        typeof bedrooms !== 'number' || typeof bathrooms !== 'number' || typeof furnished !== 'boolean'))
+      (type === 'room' && (
+        !title?.trim() ||
+        !address?.trim() ||
+        typeof priceNum !== 'number' || isNaN(priceNum) ||
+        typeof bedrooms !== 'number' ||
+        typeof bathrooms !== 'number' ||
+        typeof furnished !== 'boolean'
+      ))
     ) {
-      return NextResponse.json({ error: 'Missing required field' }, { status: 400 })
+      return NextResponse.json({ error: 'Missing or invalid required field' }, { status: 400 })
     }
 
     const docData: any = {
@@ -47,11 +59,11 @@ export async function POST(req: Request) {
       images,
       userId,
       type,
-      price: type === 'room' ? price : null,
+      price: priceNum,            // ← always a Number or null
       keywords,
       structured: type === 'room'
         ? { bedrooms, bathrooms, furnished }
-        : { bedrooms: null, bathrooms: null, furnished: null },
+        : null,
       createdAt: admin.firestore.Timestamp.now(),
       updatedAt: admin.firestore.Timestamp.now(),
     }

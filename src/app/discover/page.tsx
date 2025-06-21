@@ -72,18 +72,7 @@ export default function DiscoverRootPage() {
       </Typography>
 
       {/* “See My Matches” at top */}
-      <Button
-        variant="contained"
-        onClick={goToMatching}
-        sx={{
-          mb: 4,
-          background: '#3B82F6',
-          color: '#fff',
-          '&:hover': { background: '#2563EB' },
-        }}
-      >
-        See My Matches
-      </Button>
+     
 
       <Typography
         variant="subtitle1"

@@ -25,6 +25,9 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import HomeIcon from '@mui/icons-material/Home'
 import PersonIcon from '@mui/icons-material/Person'
+import BedIcon from '@mui/icons-material/Bed'
+import BathtubIcon from '@mui/icons-material/Bathtub'
+import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import { onAuthStateChanged } from 'firebase/auth'
 import Link from 'next/link'
 import RequireAuth from '@/components/RequireAuth'
@@ -33,7 +36,7 @@ import { getPostsByUser } from '@/lib/firestorePosts'
 import type { Timestamp } from 'firebase/firestore'
 import { doc, deleteDoc } from 'firebase/firestore'
 
-// Styled “glassmorphic” card
+// Glass-morphic card
 const FuturisticCard = styled(Card)(({ theme }) => ({
   background: 'rgba(255,255,255,0.15)',
   backdropFilter: 'blur(8px)',
@@ -55,10 +58,12 @@ type UserPost = {
   userId: string
   title: string
   description: string
-  price: number
-  address: string
-  images: string[]
+  price?: number
+  address?: string
+  bedrooms?: number
+  bathrooms?: number
   furnished?: boolean
+  images: string[]
   type: 'room' | 'roommate'
   createdAt: Timestamp
 }
@@ -70,32 +75,38 @@ export default function MyPostsPage() {
   const [toDelete, setToDelete] = useState<string | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
-  // load user’s posts
+  // hex + alpha helper
+  const alpha = (hex: string, a: number) =>
+    hex + Math.round(a * 255).toString(16).padStart(2, '0')
+
+  // Load user’s posts once authenticated
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const rawPosts = await getPostsByUser(user.uid)
-
-        // map each raw post into your UserPost shape
-        const formatted: UserPost[] = rawPosts.map((post) => {
-          // Type guard for 'room' post
-          const isRoom = (p: any): p is { price: number; type: 'room' } =>
-            p && p.type === 'room' && typeof p.price === 'number'
-
-          return {
-            id: post.id,
-            userId: post.userId,
-            title: post.title,
-            description: post.description,
-            price: isRoom(post) ? post.price : 0,
-            address: ('type' in post && post.type === 'room' ? (post as any).address : '') ?? '',
-            images: post.images ?? [],
-            furnished: ('type' in post && post.type === 'room' ? (post as any).furnished : undefined),
-            type: (post as any).type,
-            createdAt: post.createdAt,
+        const raw = await getPostsByUser(user.uid)
+        const formatted: UserPost[] = raw.map((p) => {
+          const common = {
+            id: p.id,
+            userId: p.userId,
+            title: p.title,
+            description: p.description,
+            images: p.images,
+            type: (p as any).type as 'room' | 'roommate',
+            createdAt: p.createdAt,
+          }
+          if ((p as any).type === 'room') {
+            return {
+              ...common,
+              price: (p as any).price,
+              address: (p as any).address,
+              bedrooms: (p as any).bedrooms,
+              bathrooms: (p as any).bathrooms,
+              furnished: (p as any).furnished,
+            }
+          } else {
+            return common
           }
         })
-
         setPosts(formatted)
       }
       setLoading(false)
@@ -103,30 +114,24 @@ export default function MyPostsPage() {
     return () => unsub()
   }, [])
 
-  // ask to delete
   const handleDeleteClick = (id: string) => {
     setToDelete(id)
     setConfirmOpen(true)
   }
 
-  // actually delete
   const confirmDelete = async () => {
     if (!toDelete) return
     try {
       await deleteDoc(doc(db, 'posts', toDelete))
-      setPosts((p) => p.filter((x) => x.id !== toDelete))
+      setPosts((ps) => ps.filter((x) => x.id !== toDelete))
     } catch (e) {
-      console.error('Delete failed', e)
+      console.error(e)
       alert('Could not delete post.')
     } finally {
       setConfirmOpen(false)
       setToDelete(null)
     }
   }
-
-  // helper to hex-alpha
-  const alpha = (hex: string, a: number) =>
-    hex + Math.round(a * 255).toString(16).padStart(2, '0')
 
   if (loading) {
     return (
@@ -141,9 +146,10 @@ export default function MyPostsPage() {
       <Box
         sx={{
           minHeight: '100vh',
-          background: `linear-gradient(160deg, ${
-            theme.palette.primary.light
-          }22, ${theme.palette.primary.main}11)`,
+          background: `linear-gradient(160deg, ${alpha(
+            theme.palette.primary.light,
+            0.2
+          )}, ${alpha(theme.palette.primary.main, 0.1)})`,
           py: { xs: 4, md: 8 },
           px: { xs: 2, md: 8 },
         }}
@@ -163,12 +169,7 @@ export default function MyPostsPage() {
           </Typography>
           <Typography
             variant="body1"
-            sx={{
-              color: theme.palette.text.secondary,
-              mb: 2,
-              maxWidth: 600,
-              mx: 'auto',
-            }}
+            sx={{ color: theme.palette.text.secondary, mb: 2, maxWidth: 600, mx: 'auto' }}
           >
             View, edit or delete any of your room or roommate listings.
           </Typography>
@@ -210,9 +211,7 @@ export default function MyPostsPage() {
             }}
           >
             {posts.map((post) => {
-              const daysAgo = Math.floor(
-                (Date.now() - post.createdAt.toMillis()) / 86400000
-              )
+              const daysAgo = Math.floor((Date.now() - post.createdAt.toMillis()) / 86400000)
               return (
                 <FuturisticCard key={post.id}>
                   {/* Image */}
@@ -236,38 +235,23 @@ export default function MyPostsPage() {
                           left: '50%',
                           height: '120%',
                           width: 'auto',
-                          minWidth: '100%',
                           transform: 'translate(-50%,-50%)',
                           objectFit: 'cover',
                         }}
                       />
                     ) : (
-                      <Box
-                        sx={{
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <HomeIcon
-                          sx={{ fontSize: 64, color: theme.palette.primary.main }}
-                        />
-                      </Box>
+                      <HomeIcon
+                        sx={{ fontSize: 64, color: theme.palette.primary.main, mt: 6 }}
+                      />
                     )}
                   </Box>
 
                   <CardContent sx={{ px: 3, py: 2, flexGrow: 1 }}>
-                    {/* type & age */}
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      mb={1}
-                    >
+                    {/* Badge and age */}
+                    <Stack direction="row" justifyContent="space-between" mb={1}>
                       <Chip
                         icon={post.type === 'room' ? <HomeIcon /> : <PersonIcon />}
-                        label={post.type === 'room' ? 'Room Listing' : 'Roommate'}
+                        label={post.type === 'room' ? 'Room' : 'Roommate'}
                         size="small"
                         sx={{
                           backgroundColor: alpha(theme.palette.primary.light, 0.2),
@@ -277,11 +261,7 @@ export default function MyPostsPage() {
                         }}
                       />
                       <Typography variant="caption" color="text.secondary">
-                        {daysAgo === 0
-                          ? 'Today'
-                          : daysAgo === 1
-                          ? '1 day ago'
-                          : `${daysAgo} days ago`}
+                        {daysAgo === 0 ? 'Today' : daysAgo === 1 ? '1 day ago' : `${daysAgo} days ago`}
                       </Typography>
                     </Stack>
 
@@ -314,16 +294,44 @@ export default function MyPostsPage() {
                       {post.description}
                     </Typography>
 
-                    {post.type === 'room' && (
+                    {/* Price */}
+                    {post.type === 'room' && post.price != null && (
                       <Typography
                         variant="subtitle1"
-                        sx={{
-                          color: theme.palette.primary.main,
-                          fontWeight: 700,
-                        }}
+                        sx={{ color: theme.palette.primary.main, fontWeight: 700, mb: 1 }}
                       >
                         ${post.price.toLocaleString()}/mo
                       </Typography>
+                    )}
+
+                    {/* Structured details */}
+                    {post.type === 'room' && (
+                      <Stack direction="row" spacing={1} flexWrap="wrap" mb={1}>
+                        {post.bedrooms != null && (
+                          <Chip
+                            icon={<BedIcon />}
+                            label={`${post.bedrooms} bed`}
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
+                        {post.bathrooms != null && (
+                          <Chip
+                            icon={<BathtubIcon />}
+                            label={`${post.bathrooms} bath`}
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
+                        {post.furnished && (
+                          <Chip
+                            icon={<CheckBoxIcon />}
+                            label="Furnished"
+                            size="small"
+                            variant="outlined"
+                          />
+                        )}
+                      </Stack>
                     )}
                   </CardContent>
 
@@ -358,13 +366,11 @@ export default function MyPostsPage() {
           </Box>
         )}
 
-        {/* Confirm Delete Dialog */}
+        {/* Delete confirmation */}
         <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
           <DialogTitle>Delete this post?</DialogTitle>
           <DialogContent>
-            <Typography>
-              This action cannot be undone. Are you sure you want to delete this post?
-            </Typography>
+            <Typography>This cannot be undone. Continue?</Typography>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
