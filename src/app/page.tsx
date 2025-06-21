@@ -88,11 +88,10 @@ export default function HomePage() {
         {/* Hero Text (white with drop-shadow) */}
         <div className="relative z-10 flex h-full flex-col items-center justify-center px-4 text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white drop-shadow-lg leading-tight">
-            Sharespace
+            Sharespace.ai
           </h1>
           <p className="mt-4 text-lg sm:text-xl md:text-2xl text-white/90 drop-shadow-lg max-w-2xl">
-            we match student looking for roommate <br className="hidden sm:block" /> automatically 
-            with verified rooms and roommates
+            Brings you to the perfect roomates in seconds! <br className="hidden sm:block" />
           </p>
           <Link
             href="/discover"
@@ -136,7 +135,7 @@ export default function HomePage() {
                 Personalized Matches
               </h3>
               <p className="text-gray-600">
-                Complete a quick profile survey—get paired with roommates who
+                Complete a quick profile survey get paired with roommates who
                 share your habits and interests.
               </p>
             </div>
@@ -148,7 +147,7 @@ export default function HomePage() {
               </h3>
               <p className="text-gray-600">
                 All rooms are vetted by our team. You see honest photos and
-                accurate rent details—no surprises.
+                accurate rent details, no surprises.
               </p>
             </div>
 
@@ -158,7 +157,7 @@ export default function HomePage() {
                 Interactive Map Search
               </h3>
               <p className="text-gray-600">
-                Explore neighborhoods visually—zoom, pan, and view the area.
+                Explore neighborhoods visually, zoom, pan, and view the area.
               </p>
             </div>
           </div>
@@ -196,7 +195,7 @@ export default function HomePage() {
                       src={
                         room.images && room.images.length > 0
                           ? room.images[0]
-                          : 'https://via.placeholder.com/400x240?text=No+Image'
+                          : 'C:\Users\ismae\Documents\GitHub\EasyRoom\public\ROOMIES.jpg'
                       }
                       alt={room.title || 'Room Image'}
                       className="object-cover w-full h-full"
@@ -227,11 +226,11 @@ export default function HomePage() {
            4) ABOUT SECTION – CTA CHANGED TO “Sign Up Now”
          =========================================================== */}
       <section className="py-16 bg-blue-50">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 px-6 lg:flex-row lg:gap-24 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 px-16 lg:flex-row lg:gap-24 lg:px-8">
           {/* Left: Illustrative graphic (placeholder) */}
           <div className="relative w-full max-w-md flex-shrink-0">
             <img
-              src="public\ROOMIES.jpg"
+              src="logo.png"
               alt="About Sharespace"
               className="rounded-xl shadow-lg object-cover w-full h-full"
             />
@@ -240,18 +239,18 @@ export default function HomePage() {
           {/* Right: Text */}
           <div>
             <h2 className="text-3xl font-bold text-gray-800 mb-4">
-              About Sharespace
+              About Sharespace.ai
             </h2>
             <p className="text-gray-600 mb-6 max-w-2xl">
               Sharespace is the easiest way to find a roommate or room near
               you. Whether you’re a student, a young professional, or just want
               to split rent, our smart matching engine pairs you with
-              compatible roommates and verified rooms—no hassles, no scams.
+              compatible roommates and verified rooms, no hassles, no scams.
             </p>
             <ul className="space-y-3 text-gray-600 mb-8 max-w-2xl">
               <li>
                 • <strong>Smart Matching:</strong> Fill out a quick profile
-                survey—share your daily habits and interests. Get matched with
+                survey and share your daily habits and interests. Get matched with
                 someone who actually fits your lifestyle.
               </li>
               <li>
@@ -261,7 +260,7 @@ export default function HomePage() {
               </li>
               <li>
                 • <strong>Built‐In Chat:</strong> Message potential roommates
-                and landlords directly in-app—ask questions, schedule tours,
+                and landlords directly in-app, ask questions, schedule tours,
                 finalize details without switching apps.
               </li>
             </ul>
@@ -284,7 +283,7 @@ export default function HomePage() {
             Explore Berkeley On The Map
           </h2>
           <p className="text-gray-600 mx-auto max-w-2xl mb-8">
-            Zoom and pan around Berkeley. This is a plain map—no pins or markers.
+            Zoom and pan around Berkeley. This is a plain map, no pins or markers.
           </p>
         </div>
 

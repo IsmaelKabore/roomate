@@ -13,8 +13,9 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
-        // Save intended path before redirecting
-        sessionStorage.setItem('redirectAfterLogin', pathname)
+        // never pass null into setItem
+        const redirectPath = pathname ?? '/'
+        sessionStorage.setItem('redirectAfterLogin', redirectPath)
         router.replace('/auth/login')
       } else {
         setLoading(false)

@@ -50,8 +50,8 @@ export default function Header() {
             <Image
               src="/logo.png"
               alt="Sharespace Logo"
-              width={60}
-              height={60}
+              width={80}
+              height={80}
               style={{ borderRadius: '8px' }}
               priority
             />

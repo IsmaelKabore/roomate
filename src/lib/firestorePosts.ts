@@ -1,4 +1,4 @@
-// src/lib/firestorePosts.ts
+// File: src/lib/firestorePosts.ts
 
 import { db } from './firebaseConfig'
 import {
@@ -33,33 +33,46 @@ interface BasePostData {
 }
 
 /**
- * Fields specific to a "room" post.
+ * Fields specific to a "room" post in Firestore.
+ * Note: price may be stored as null, so we coerce later.
  */
 interface RoomPostData extends BasePostData {
-  price?: number
+  price?: number | null
   address?: string
+  structured?: {
+    bedrooms?: number | null
+    bathrooms?: number | null
+    furnished?: boolean | null
+  }
 }
 
 /**
- * Fields specific to a "roommate" post.
+ * Fields specific to a "roommate" post in Firestore.
  */
 interface RoommatePostData extends BasePostData {}
 
+/**
+ * What the UI consumer sees for a room post.
+ * All Firestore-nullable fields become optional/undefined here.
+ */
 export interface RoomPost {
   id: string
   userId: string
   title: string
   description: string
-  price?: number
-  address?: string
   images: string[]
   keywords: string[]
-  createdAt: Timestamp
   embedding: number[]
+  createdAt: Timestamp
+  price?: number
+  address: string
+  bedrooms?: number
+  bathrooms?: number
+  furnished?: boolean
 }
 
 /**
- * Exported interface for roommate posts.
+ * What the UI consumer sees for a roommate post.
  */
 export interface RoommatePost {
   id: string
@@ -68,8 +81,8 @@ export interface RoommatePost {
   description: string
   images: string[]
   keywords: string[]
-  createdAt: Timestamp
   embedding: number[]
+  createdAt: Timestamp
 }
 
 /**
@@ -87,19 +100,23 @@ export interface CreatePostData {
 }
 
 /**
- * Create a new post document (uploads embedding & keywords).
+ * Create a new post document (and generate its embedding).
  * Returns the new document ID.
  */
 export async function createPost(postData: CreatePostData): Promise<string> {
   const postsRef = collection(db, 'posts')
 
   // 1) Build combined text for embedding:
-  const combinedText = `${postData.title.trim()}\n${postData.description.trim()}\n${(postData.address || '').trim()}`
+  const combinedText = [
+    postData.title.trim(),
+    postData.description.trim(),
+    (postData.address || '').trim(),
+  ].join('\n')
 
-  // 2) Request embedding from DeepSeek:
+  // 2) Request embedding:
   const embedding = await getDeepSeekEmbedding(combinedText)
 
-  // 3) Write to Firestore, including embedding & keywords:
+  // 3) Write to Firestore:
   const docRef = await addDoc(postsRef, {
     userId: postData.userId,
     title: postData.title.trim(),
@@ -109,8 +126,9 @@ export async function createPost(postData: CreatePostData): Promise<string> {
     price: postData.price ?? null,
     address: postData.address ?? '',
     keywords: postData.keywords,
-    embedding,            // 1536-element float array
+    embedding,
     createdAt: Timestamp.now(),
+    // No structured fields on initial create
   })
 
   return docRef.id
@@ -118,32 +136,14 @@ export async function createPost(postData: CreatePostData): Promise<string> {
 
 /**
  * Fetch a single post by its ID.
+ * Returns null if not found.
  */
-export async function getPostById(
-  postId: string
-): Promise<
-  | {
-      id: string
-      userId: string
-      title: string
-      description: string
-      price?: number
-      address?: string
-      images: string[]
-      keywords: string[]
-      type: 'room' | 'roommate'
-      createdAt: Timestamp
-      embedding: number[]
-    }
-  | null
-> {
+export async function getPostById(postId: string): Promise<RoomPost | RoommatePost | null> {
   const postRef = doc(db, 'posts', postId)
   const snap = await getDoc(postRef)
   if (!snap.exists()) return null
 
   const data = snap.data() as DocumentData
-
-  // Base fields:
   const base: BasePostData = {
     userId: data.userId,
     title: data.title,
@@ -156,42 +156,26 @@ export async function getPostById(
   }
 
   if (base.type === 'room') {
-    const roomData: RoomPostData = {
-      ...base,
-      price: data.price,
-      address: data.address,
-    }
+    const rd = (data.structured || {}) as Record<string, any>
     return {
       id: snap.id,
-      userId: roomData.userId,
-      title: roomData.title,
-      description: roomData.description,
-      price: roomData.price,
-      address: roomData.address,
-      images: roomData.images,
-      keywords: roomData.keywords,
-      type: roomData.type,
-      createdAt: roomData.createdAt,
-      embedding: roomData.embedding,
+      ...base,
+      price: typeof data.price === 'number' ? data.price : undefined,
+      address: data.address ?? '',
+      bedrooms: typeof rd.bedrooms === 'number' ? rd.bedrooms : undefined,
+      bathrooms: typeof rd.bathrooms === 'number' ? rd.bathrooms : undefined,
+      furnished: typeof rd.furnished === 'boolean' ? rd.furnished : undefined,
     }
   } else {
-    const mateData: RoommatePostData = { ...base }
     return {
       id: snap.id,
-      userId: mateData.userId,
-      title: mateData.title,
-      description: mateData.description,
-      images: mateData.images,
-      keywords: mateData.keywords,
-      type: mateData.type,
-      createdAt: mateData.createdAt,
-      embedding: mateData.embedding,
+      ...base,
     }
   }
 }
 
 /**
- * Update an existing post (recomputes embedding if title/description/address changed).
+ * Update an existing post (recomputes embedding if relevant).
  */
 export async function updatePost(
   postId: string,
@@ -203,13 +187,20 @@ export async function updatePost(
     images: string[]
     type: 'room' | 'roommate'
     keywords: string[]
+    bedrooms?: number
+    bathrooms?: number
+    furnished?: boolean
   }
 ): Promise<void> {
   const postRef = doc(db, 'posts', postId)
 
-  // 1) If title/description/address changed, recompute embedding:
-  const combinedText = `${postData.title.trim()}\n${postData.description.trim()}\n${(postData.address || '').trim()}`
-  const newEmbedding = await getDeepSeekEmbedding(combinedText)
+  // 1) Recompute embedding:
+  const combinedText = [
+    postData.title.trim(),
+    postData.description.trim(),
+    (postData.address || '').trim(),
+  ].join('\n')
+  const embedding = await getDeepSeekEmbedding(combinedText)
 
   // 2) Update Firestore doc:
   await updateDoc(postRef, {
@@ -220,7 +211,15 @@ export async function updatePost(
     images: postData.images,
     type: postData.type,
     keywords: postData.keywords,
-    embedding: newEmbedding,
+    embedding,
+    structured:
+      postData.type === 'room'
+        ? {
+            bedrooms: postData.bedrooms ?? null,
+            bathrooms: postData.bathrooms ?? null,
+            furnished: postData.furnished ?? null,
+          }
+        : null,
   })
 }
 
@@ -235,27 +234,9 @@ export async function deletePost(postId: string): Promise<void> {
 /**
  * List all posts by a specific user.
  */
-export async function getPostsByUser(userId: string): Promise<
-  {
-    id: string
-    userId: string
-    title: string
-    description: string
-    price?: number
-    address?: string
-    images: string[]
-    keywords: string[]
-    type: 'room' | 'roommate'
-    createdAt: Timestamp
-    embedding: number[]
-  }[]
-> {
+export async function getPostsByUser(userId: string): Promise<(RoomPost | RoommatePost)[]> {
   const postsRef = collection(db, 'posts')
-  const q = query(
-    postsRef,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
-  )
+  const q = query(postsRef, where('userId', '==', userId), orderBy('createdAt', 'desc'))
   const snapshot = await getDocs(q)
   return snapshot.docs.map((docSnap: QueryDocumentSnapshot<DocumentData>) => {
     const data = docSnap.data()
@@ -270,115 +251,71 @@ export async function getPostsByUser(userId: string): Promise<
       embedding: data.embedding || [],
     }
     if (base.type === 'room') {
-      const roomData: RoomPostData = {
-        ...base,
-        price: data.price,
-        address: data.address,
-      }
+      const rd = (data.structured || {}) as Record<string, any>
       return {
         id: docSnap.id,
-        userId: roomData.userId,
-        title: roomData.title,
-        description: roomData.description,
-        price: roomData.price,
-        address: roomData.address,
-        images: roomData.images,
-        keywords: roomData.keywords,
-        type: roomData.type,
-        createdAt: roomData.createdAt,
-        embedding: roomData.embedding,
+        ...base,
+        price: typeof data.price === 'number' ? data.price : undefined,
+        address: data.address ?? '',
+        bedrooms: typeof rd.bedrooms === 'number' ? rd.bedrooms : undefined,
+        bathrooms: typeof rd.bathrooms === 'number' ? rd.bathrooms : undefined,
+        furnished: typeof rd.furnished === 'boolean' ? rd.furnished : undefined,
       }
     } else {
-      const mateData: RoommatePostData = { ...base }
       return {
         id: docSnap.id,
-        userId: mateData.userId,
-        title: mateData.title,
-        description: mateData.description,
-        images: mateData.images,
-        keywords: mateData.keywords,
-        type: mateData.type,
-        createdAt: mateData.createdAt,
-        embedding: mateData.embedding,
+        ...base,
       }
     }
   })
 }
 
 /**
- * List all “room” posts (array only).
- * Returns an array of RoomPost.
+ * List all “room” posts.
  */
 export async function getRoomPosts(): Promise<RoomPost[]> {
   const postsRef = collection(db, 'posts')
-  const q = query(
-    postsRef,
-    where('type', '==', 'room'),
-    orderBy('createdAt', 'desc')
-  )
+  const q = query(postsRef, where('type', '==', 'room'), orderBy('createdAt', 'desc'))
   const snapshot = await getDocs(q)
   return snapshot.docs.map((docSnap: QueryDocumentSnapshot<DocumentData>) => {
     const data = docSnap.data()
-    const roomData: RoomPostData = {
+    const rd = (data.structured || {}) as Record<string, any>
+    return {
+      id: docSnap.id,
       userId: data.userId,
       title: data.title,
       description: data.description,
       images: data.images || [],
-      type: data.type,
-      createdAt: data.createdAt,
-      price: data.price,
-      address: data.address,
       keywords: data.keywords || [],
       embedding: data.embedding || [],
-    }
-    return {
-      id: docSnap.id,
-      userId: roomData.userId,
-      title: roomData.title,
-      description: roomData.description,
-      price: roomData.price,
-      address: roomData.address,
-      images: roomData.images,
-      keywords: roomData.keywords,
-      createdAt: roomData.createdAt,
-      embedding: roomData.embedding,
+      createdAt: data.createdAt,
+      price: typeof data.price === 'number' ? data.price : undefined,
+      address: data.address ?? '',
+      bedrooms: typeof rd.bedrooms === 'number' ? rd.bedrooms : undefined,
+      bathrooms: typeof rd.bathrooms === 'number' ? rd.bathrooms : undefined,
+      furnished: typeof rd.furnished === 'boolean' ? rd.furnished : undefined,
     }
   })
 }
 
 /**
- * List all “roommate” posts (array only).
- * Returns an array of RoommatePost.
+ * List all “roommate” posts.
  */
 export async function getRoommatePosts(): Promise<RoommatePost[]> {
   const postsRef = collection(db, 'posts')
-  const q = query(
-    postsRef,
-    where('type', '==', 'roommate'),
-    orderBy('createdAt', 'desc')
-  )
+  const q = query(postsRef, where('type', '==', 'roommate'), orderBy('createdAt', 'desc'))
   const snapshot = await getDocs(q)
   return snapshot.docs.map((docSnap: QueryDocumentSnapshot<DocumentData>) => {
     const data = docSnap.data()
-    const mateData: RoommatePostData = {
+    return {
+      id: docSnap.id,
       userId: data.userId,
       title: data.title,
       description: data.description,
       images: data.images || [],
-      type: data.type,
-      createdAt: data.createdAt,
       keywords: data.keywords || [],
       embedding: data.embedding || [],
-    }
-    return {
-      id: docSnap.id,
-      userId: mateData.userId,
-      title: mateData.title,
-      description: mateData.description,
-      images: mateData.images,
-      keywords: mateData.keywords,
-      createdAt: mateData.createdAt,
-      embedding: mateData.embedding,
+      createdAt: data.createdAt,
     }
   })
 }

@@ -23,6 +23,7 @@ service cloud.firestore {
 
     // ─────────────────────────────────────────────────────────────────────────
     // MESSAGES: each “room” document under /messages/{roomId}, plus its sub‐collection
+    // MESSAGES: each “room” document under /messages/{roomId}, plus its sub‐collection
     // ─────────────────────────────────────────────────────────────────────────
     match /messages/{roomId} {
       // 1) Allow listing only rooms you participate in

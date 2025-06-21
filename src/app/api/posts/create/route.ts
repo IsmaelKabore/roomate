@@ -1,4 +1,3 @@
-// File: src/app/api/posts/create/route.ts
 import { NextResponse } from 'next/server'
 import admin from 'firebase-admin'
 
@@ -29,24 +28,16 @@ export async function POST(req: Request) {
       furnished,
     } = await req.json()
 
+    // validate
     if (
       !userId ||
-      !Array.isArray(images) ||
-      images.length === 0 ||
-      !Array.isArray(keywords) ||
-      keywords.length === 0 ||
+      !Array.isArray(images) || images.length === 0 ||
+      !Array.isArray(keywords) || keywords.length === 0 ||
       typeof description !== 'string' ||
-      (type === 'room' && (typeof title !== 'string' || !title.trim())) ||
-      (type === 'room' && (typeof address !== 'string' || !address.trim())) ||
-      (type === 'room' && typeof price !== 'number') ||
-      (type === 'room' && typeof bedrooms !== 'number') ||
-      (type === 'room' && typeof bathrooms !== 'number') ||
-      (type === 'room' && typeof furnished !== 'boolean')
+      (type === 'room' && (!title?.trim() || !address?.trim() || typeof price !== 'number' ||
+        typeof bedrooms !== 'number' || typeof bathrooms !== 'number' || typeof furnished !== 'boolean'))
     ) {
-      return NextResponse.json(
-        { error: 'Missing required field' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Missing required field' }, { status: 400 })
     }
 
     const docData: any = {
@@ -69,9 +60,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ id: ref.id })
   } catch (err: any) {
     console.error('[/api/posts/create] Error:', err)
-    return NextResponse.json(
-      { error: err.message || 'Unknown error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: err.message || 'Unknown error' }, { status: 500 })
   }
 }

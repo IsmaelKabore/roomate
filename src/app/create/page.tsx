@@ -13,6 +13,8 @@ import {
   Paper,
   CircularProgress,
   IconButton,
+  FormControlLabel,
+  Checkbox,
   useTheme,
   alpha,
 } from '@mui/material'
@@ -31,6 +33,9 @@ type FormValues = {
   title: string
   description: string
   price?: number
+  bedrooms: number
+  bathrooms: number
+  furnished: boolean
   address: string
   keywordsInput: string
 }
@@ -43,17 +48,19 @@ interface CreatePostPayload {
   userId: string
   type: 'room' | 'roommate'
   price?: number
+  bedrooms: number
+  bathrooms: number
+  furnished: boolean
   keywords: string[]
 }
 
-// Static array for Google Maps libraries
-const MAP_LIBRARIES: ('places')[] = ['places']
+// keep this array truly static
+const MAP_LIBRARIES: Array<'places'> = ['places']
 
 export default function CreatePostPage() {
   const router = useRouter()
   const theme = useTheme()
 
-  // react-hook-form setup
   const {
     register,
     handleSubmit,
@@ -67,6 +74,9 @@ export default function CreatePostPage() {
       title: '',
       description: '',
       price: undefined,
+      bedrooms: 1,
+      bathrooms: 1,
+      furnished: false,
       address: '',
       keywordsInput: '',
     },
@@ -74,7 +84,7 @@ export default function CreatePostPage() {
   const selectedType = watch('type')
   const currentDescription = watch('description')
 
-  // Google Maps Autocomplete
+  // load Google Maps SDK
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries: MAP_LIBRARIES,
@@ -88,75 +98,76 @@ export default function CreatePostPage() {
     if (place?.formatted_address) onChange(place.formatted_address)
   }
 
-  // Image upload state
+  // images state
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
 
-  // AI Buttons state (currently just placeholders)
-  const [generatingTitle, setGeneratingTitle] = useState(false)
-  const [proofreading, setProofreading] = useState(false)
-
-  const onGenerateTitle = () => {
-    console.log('Generate Title clicked – implement if needed')
-  }
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-    const newFiles: File[] = []
-    for (let i = 0; i < files.length; i++) {
-      newFiles.push(files[i])
+    Array.from(files).forEach((file) => {
       const reader = new FileReader()
       reader.onloadend = () => {
-        setImagePreviews((prev) => [...prev, reader.result as string])
+        setImagePreviews((p) => [...p, reader.result as string])
       }
-      reader.readAsDataURL(files[i])
-    }
-    setImageFiles((prev) => [...prev, ...newFiles])
+      reader.readAsDataURL(file)
+    })
+    setImageFiles((p) => [...p, ...Array.from(files)])
   }
 
-  const removeImageAt = (index: number) => {
-    setImageFiles((prev) => prev.filter((_, i) => i !== index))
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+  const removeImageAt = (i: number) => {
+    setImageFiles((p) => p.filter((_, idx) => idx !== i))
+    setImagePreviews((p) => p.filter((_, idx) => idx !== i))
   }
 
-  // Handle “Proofread Description” (optional server route)
-  async function onProofreadDescription(
-    event: React.MouseEvent<HTMLButtonElement, MouseEvent>
-  ): Promise<void> {
-    if (currentDescription.trim().length === 0) {
-      alert('Description is empty. Please provide a description to proofread.')
-      return
-    }
+  // AI assistance state
+  const [generatingTitle, setGeneratingTitle] = useState(false)
+  const [proofreading, setProofreading] = useState(false)
 
+  const onGenerateTitle = async () => {
+    if (!currentDescription.trim()) return
+    setGeneratingTitle(true)
+    try {
+      const keywords = watch('keywordsInput')
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean)
+      const res = await fetch('/api/posts/generateTitle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: currentDescription, keywords }),
+      })
+      if (!res.ok) throw new Error()
+      const { title } = await res.json()
+      reset({ ...watch(), title })
+    } catch {
+      alert('Title generation failed')
+    } finally {
+      setGeneratingTitle(false)
+    }
+  }
+
+  const onProofreadDescription = async () => {
+    if (!currentDescription.trim()) return
     setProofreading(true)
     try {
-      const response = await fetch('/api/posts/proofreadDescription', {
+      const res = await fetch('/api/posts/proofreadDescription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ draft: currentDescription }),
       })
-      if (!response.ok) {
-        throw new Error('Failed to proofread the description.')
-      }
-      const { polished } = await response.json()
-      reset(
-        {
-          ...watch(),
-          description: polished,
-        },
-        { keepErrors: true, keepDirty: true, keepTouched: true }
-      )
-      alert('Description has been proofread and updated.')
-    } catch (error: any) {
-      console.error('Error proofreading description:', error)
-      alert(error.message || 'Unknown error while proofreading.')
+      if (!res.ok) throw new Error()
+      const { polished } = await res.json()
+      reset({ ...watch(), description: polished })
+    } catch {
+      alert('Proofreading failed')
     } finally {
       setProofreading(false)
     }
   }
 
+  // form submit
   const onSubmit = async (data: FormValues) => {
     if (imageFiles.length === 0) {
       alert('Upload at least one image')
@@ -169,62 +180,59 @@ export default function CreatePostPage() {
     }
 
     setSubmitting(true)
-
-    // 1) Upload all images
-    const uploadPromises = imageFiles.map((file) => uploadImage(file))
-    const imageUrls = await Promise.all(uploadPromises)
-
-    // 2) Build keyword array
-    const keywordsArray = data.keywordsInput
-      .split(',')
-      .map((kw) => kw.trim().toLowerCase())
-      .filter((kw) => kw.length > 0)
-
-    if (keywordsArray.length === 0) {
-      alert('Enter at least one keyword (comma-separated)')
-      setSubmitting(false)
-      return
-    }
-
-    // 3) Build payload
-    const payload: CreatePostPayload = {
-      title: selectedType === 'room' ? data.title : '',
-      description: data.description,
-      address: selectedType === 'room' ? data.address : '',
-      images: imageUrls,
-      userId: user.uid,
-      type: selectedType,
-      keywords: keywordsArray,
-    }
-    if (selectedType === 'room' && data.price !== undefined) {
-      payload.price = data.price
-    }
-
     try {
+      // upload images
+      const urls = await Promise.all(imageFiles.map(uploadImage))
+
+      const keywords = data.keywordsInput
+        .split(',')
+        .map((k) => k.trim().toLowerCase())
+        .filter(Boolean)
+      if (!keywords.length) {
+        alert('Enter at least one keyword')
+        setSubmitting(false)
+        return
+      }
+
+      const payload: CreatePostPayload = {
+        title: data.type === 'room' ? data.title.trim() : '',
+        description: data.description.trim(),
+        address: data.type === 'room' ? data.address.trim() : '',
+        images: urls,
+        userId: user.uid,
+        type: data.type,
+        price: data.type === 'room' ? data.price : undefined,
+        bedrooms: data.type === 'room' ? data.bedrooms : 0,
+        bathrooms: data.type === 'room' ? data.bathrooms : 0,
+        furnished: data.type === 'room' ? data.furnished : false,
+        keywords,
+      }
+
       const res = await fetch('/api/posts/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      const body = await res.json()
-      if (!res.ok) {
-        throw new Error(body.error || 'Failed to create post')
-      }
-      // Optionally use body.id
+      if (!res.ok) throw new Error((await res.json()).error)
+
+      // reset and redirect
       reset({
         type: 'room',
         title: '',
         description: '',
         price: undefined,
+        bedrooms: 1,
+        bathrooms: 1,
+        furnished: false,
         address: '',
         keywordsInput: '',
       })
       setImageFiles([])
       setImagePreviews([])
-      router.push(selectedType === 'room' ? '/discover/rooms' : '/discover/roommates')
+      router.push(data.type === 'room' ? '/discover/rooms' : '/discover/roommates')
     } catch (err: any) {
-      console.error('Error creating post:', err)
-      alert(err.message || 'An unknown error occurred')
+      console.error(err)
+      alert(err.message || 'Create failed')
     } finally {
       setSubmitting(false)
     }
@@ -305,55 +313,44 @@ export default function CreatePostPage() {
             fullWidth
             {...register('type')}
             value={selectedType}
-            sx={{
-              mb: 4,
-              '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
-              },
-              '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline':
-                {
-                  borderColor: theme.palette.primary.dark,
-                },
-              '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-            }}
+            sx={{ mb: 4 }}
           >
             <MenuItem value="room">
-              <HomeIcon sx={{ mr: 1, color: theme.palette.primary.main }} /> Room
+              <HomeIcon sx={{ mr: 1 }} /> Room
             </MenuItem>
             <MenuItem value="roommate">
-              <PersonIcon sx={{ mr: 1, color: theme.palette.primary.main }} /> Roommate
+              <PersonIcon sx={{ mr: 1 }} /> Roommate
             </MenuItem>
           </TextField>
 
-          {/* Title (only if room) */}
+          {/* Title + AI */}
           {selectedType === 'room' && (
-            <TextField
-              label="Title"
-              fullWidth
-              {...register('title', { required: 'Required' })}
-              error={!!errors.title}
-              helperText={errors.title?.message}
-              sx={{
-                mb: 4,
-                '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme.palette.primary.main,
-                },
-                '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline':
-                  {
-                    borderColor: theme.palette.primary.dark,
-                  },
-                '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-              }}
-            />
+            <>
+              <TextField
+                label="Title"
+                fullWidth
+                {...register('title', { required: 'Required' })}
+                error={!!errors.title}
+                helperText={errors.title?.message}
+                sx={{ mb: 2 }}
+              />
+              <Button
+                variant="outlined"
+                onClick={onGenerateTitle}
+                disabled={generatingTitle || !currentDescription.trim()}
+                startIcon={generatingTitle ? <CircularProgress size={16} /> : <LightbulbIcon />}
+                sx={{ mb: 3 }}
+              >
+                {generatingTitle ? 'Generating…' : 'Generate Title'}
+              </Button>
+            </>
           )}
 
-          {/* Description */}
+          {/* Description + AI */}
           <TextField
             label={
               selectedType === 'room'
-                ? 'Description (e.g. 2BR furnished apartment…)'
+                ? 'Description (e.g. 2BR furnished…)'
                 : 'Describe the roommate you’re looking for'
             }
             fullWidth
@@ -362,94 +359,29 @@ export default function CreatePostPage() {
             {...register('description', { required: 'Required' })}
             error={!!errors.description}
             helperText={errors.description?.message}
-            sx={{
-              mb: 2,
-              '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
-              },
-              '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline':
-                {
-                  borderColor: theme.palette.primary.dark,
-                },
-              '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-            }}
+            sx={{ mb: 2 }}
           />
+          <Button
+            variant="outlined"
+            onClick={onProofreadDescription}
+            disabled={proofreading || !currentDescription.trim()}
+            startIcon={proofreading ? <CircularProgress size={16} /> : <SpellcheckIcon />}
+            sx={{ mb: 4 }}
+          >
+            {proofreading ? 'Proofreading…' : 'Proofread'}
+          </Button>
 
-          {/* AI Buttons (optional) */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
-            {selectedType === 'room' && (
-              <Button
-                variant="outlined"
-                onClick={onGenerateTitle}
-                disabled={generatingTitle || currentDescription.trim().length === 0}
-                startIcon={
-                  generatingTitle ? <CircularProgress size={16} color="inherit" /> : <LightbulbIcon />
-                }
-                sx={{
-                  flex: 1,
-                  borderColor: theme.palette.primary.main,
-                  color: theme.palette.primary.main,
-                  textTransform: 'none',
-                  px: 2,
-                  py: 1,
-                  borderRadius: 2,
-                  '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.light, 0.2),
-                    borderColor: theme.palette.primary.dark,
-                  },
-                }}
-              >
-                Generate Catchy Title
-              </Button>
-            )}
-
-            <Button
-              variant="outlined"
-              onClick={onProofreadDescription}
-              disabled={proofreading || currentDescription.trim().length === 0}
-              startIcon={
-                proofreading ? <CircularProgress size={16} color="inherit" /> : <SpellcheckIcon />
-              }
-              sx={{
-                flex: 1,
-                borderColor: theme.palette.primary.main,
-                color: theme.palette.primary.main,
-                textTransform: 'none',
-                px: 2,
-                py: 1,
-                borderRadius: 2,
-                '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.light, 0.2),
-                  borderColor: theme.palette.primary.dark,
-                },
-              }}
-            >
-              Proofread Description
-            </Button>
-          </Box>
-
-          {/* Keywords (comma-separated) */}
+          {/* Keywords */}
           <TextField
             label="Keywords (comma-separated)"
             fullWidth
             {...register('keywordsInput', { required: 'Enter at least one keyword' })}
             error={!!errors.keywordsInput}
-            helperText={errors.keywordsInput?.message || 'e.g. furnished, 2BR, near campus'}
-            sx={{
-              mb: 4,
-              '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
-              },
-              '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.dark,
-              },
-              '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-            }}
+            helperText={errors.keywordsInput?.message}
+            sx={{ mb: 4 }}
           />
 
-          {/* Price (only if room) */}
+          {/* Price */}
           {selectedType === 'room' && (
             <TextField
               label="Price (USD/mo)"
@@ -458,24 +390,46 @@ export default function CreatePostPage() {
               {...register('price', {
                 required: 'Required',
                 min: { value: 1, message: 'Must be > 0' },
+                valueAsNumber: true,
               })}
               error={!!errors.price}
               helperText={errors.price?.message}
-              sx={{
-                mb: 4,
-                '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme.palette.primary.main,
-                },
-                '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme.palette.primary.dark,
-                },
-                '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-              }}
+              sx={{ mb: 3 }}
             />
           )}
 
-          {/* Address (only if room) */}
+          {/* Bedrooms */}
+          {selectedType === 'room' && (
+            <TextField select label="Bedrooms" fullWidth {...register('bedrooms')} sx={{ mb: 3 }}>
+              {[1, 2, 3, 4].map((n) => (
+                <MenuItem key={n} value={n}>
+                  {n}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+
+          {/* Bathrooms */}
+          {selectedType === 'room' && (
+            <TextField select label="Bathrooms" fullWidth {...register('bathrooms')} sx={{ mb: 3 }}>
+              {[1, 2, 3].map((n) => (
+                <MenuItem key={n} value={n}>
+                  {n}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
+
+          {/* Furnished */}
+          {selectedType === 'room' && (
+            <FormControlLabel
+              control={<Checkbox {...register('furnished')} />}
+              label="Furnished"
+              sx={{ mb: 4 }}
+            />
+          )}
+
+          {/* Address with Autocomplete */}
           {selectedType === 'room' && (
             <Controller
               name="address"
@@ -490,47 +444,19 @@ export default function CreatePostPage() {
                     onChange={(e) => onChange(e.target.value)}
                     error={!!errors.address}
                     helperText={errors.address?.message}
-                    sx={{
-                      mb: 4,
-                      '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: theme.palette.primary.main,
-                      },
-                      '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: theme.palette.primary.dark,
-                      },
-                      '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-                    }}
+                    sx={{ mb: 4 }}
                   />
                 </Autocomplete>
               )}
             />
           )}
 
-          {/* MULTIPLE Image Upload */}
-          <Button
-            variant="outlined"
-            component="label"
-            fullWidth
-            sx={{
-              mb: 4,
-              borderColor: theme.palette.primary.main,
-              color: theme.palette.primary.main,
-              textTransform: 'none',
-              px: 2,
-              py: 1,
-              borderRadius: 2,
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.light, 0.2),
-                borderColor: theme.palette.primary.dark,
-              },
-            }}
-          >
+          {/* Image Upload */}
+          <Button variant="outlined" component="label" fullWidth sx={{ mb: 4 }}>
             <PhotoCameraIcon sx={{ mr: 1 }} />
-            {imagePreviews.length > 0 ? 'Add/Change Images' : 'Upload Images'}
+            {imagePreviews.length ? 'Add/Change Images' : 'Upload Images'}
             <input type="file" accept="image/*" hidden multiple onChange={handleFileChange} />
           </Button>
-
           {imagePreviews.length > 0 && (
             <Box
               sx={{
@@ -544,67 +470,37 @@ export default function CreatePostPage() {
                 borderRadius: 2,
               }}
             >
-              {imagePreviews.map((src, idx) => (
+              {imagePreviews.map((src, i) => (
                 <Box
-                  key={idx}
+                  key={i}
                   sx={{
                     position: 'relative',
-                    minWidth: 100,
-                    minHeight: 100,
+                    width: 100,
+                    height: 100,
                     borderRadius: 2,
                     overflow: 'hidden',
-                    flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                   }}
                 >
                   <IconButton
                     size="small"
-                    onClick={() => removeImageAt(idx)}
+                    onClick={() => removeImageAt(i)}
                     sx={{
                       position: 'absolute',
                       top: 4,
                       right: 4,
-                      backgroundColor: alpha('#FFFFFF', 0.8),
-                      '&:hover': { backgroundColor: '#FFFFFF' },
-                      zIndex: 10,
+                      backgroundColor: '#ffffff',
                     }}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
-                  <Box
-                    component="img"
-                    src={src}
-                    alt={`preview-${idx}`}
-                    sx={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                  />
+                  <Box component="img" src={src} alt={`preview-${i}`} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </Box>
               ))}
             </Box>
           )}
 
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            variant="contained"
-            fullWidth
-            disabled={submitting}
-            sx={{
-              background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
-              fontWeight: 600,
-              py: 1.5,
-              borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-              '&:hover': {
-                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                boxShadow: '0 6px 18px rgba(0,0,0,0.2)',
-              },
-            }}
-          >
-            {submitting ? <CircularProgress size={24} color="inherit" /> : 'Submit Post'}
+          <Button type="submit" variant="contained" fullWidth disabled={submitting}>
+            {submitting ? <CircularProgress size={24} /> : 'Submit Post'}
           </Button>
         </form>
       </Paper>

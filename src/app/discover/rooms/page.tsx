@@ -1,4 +1,3 @@
-// File: src/app/discover/rooms/page.tsx
 'use client'
 
 import { useEffect, useState } from 'react'
@@ -15,54 +14,42 @@ import {
   TextField,
   IconButton,
   Pagination,
+  FormControlLabel,
+  Checkbox,
+  MenuItem,
 } from '@mui/material'
-import { ArrowBackIosNew, ArrowForwardIos, Chat as ChatIcon } from '@mui/icons-material'
+import {
+  ArrowBackIosNew,
+  ArrowForwardIos,
+  Chat as ChatIcon,
+} from '@mui/icons-material'
+import BedIcon from '@mui/icons-material/Bed'
+import BathtubIcon from '@mui/icons-material/Bathtub'
 import { useRouter } from 'next/navigation'
-import { getRoomPosts } from '@/lib/firestorePosts'
+import { getRoomPosts, RoomPost } from '@/lib/firestorePosts'
 import { fetchUserProfile } from '@/lib/firestoreProfile'
 import { auth } from '@/lib/firebaseConfig'
 import { createRoom } from '@/lib/firestoreMessages'
-import type { Timestamp } from 'firebase/firestore'
-
-type RoomPost = {
-  id: string
-  userId: string
-  title: string
-  description: string
-  price?: number
-  address?: string
-  locationLabel?: string
-  bedrooms?: number
-  bathrooms?: number
-  sqft?: number
-  images: string[]
-  createdAt: Timestamp
-  profile?: {
-    name?: string
-    profilePicture?: string
-    traits?: string[]
-  }
-}
 
 function Carousel({ images }: { images: string[] }) {
   const [current, setCurrent] = useState(0)
   const prev = () => setCurrent((c) => (c - 1 + images.length) % images.length)
   const next = () => setCurrent((c) => (c + 1) % images.length)
 
-  if (!images || images.length === 0) {
+  if (!images.length) {
     return (
       <Box
         sx={{
-          flexBasis: '70%',
-          background: 'linear-gradient(135deg, #E0F2FE, #FFFFFF)',
+          width: '100%',
+          height: { xs: 200, md: '100%' },
+          background: 'linear-gradient(135deg, #E0F2FE, #FFF)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderTopLeftRadius: 8,
-          borderTopRightRadius: 8,
+          borderRadius: 1,
         }}
       >
-        <Typography sx={{ color: '#475569' }}>No Image</Typography>
+        <Typography>No Image</Typography>
       </Box>
     )
   }
@@ -71,57 +58,49 @@ function Carousel({ images }: { images: string[] }) {
     <Box
       sx={{
         position: 'relative',
-        flexBasis: '70%',
+        width: '100%',
+        height: { xs: 200, md: '100%' },
         overflow: 'hidden',
-        borderTopLeftRadius: 8,
-        borderTopRightRadius: 8,
+        borderRadius: 1,
       }}
     >
       <Box
         component="img"
         src={images[current]}
-        alt={`carousel-${current}`}
-        sx={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-        }}
+        alt={`slide-${current}`}
+        sx={{ width: '100%', height: '100%', objectFit: 'cover' }}
       />
       {images.length > 1 && (
         <>
           <IconButton
             onClick={prev}
+            size="small"
             sx={{
               position: 'absolute',
               top: '50%',
-              left: 12,
+              left: 8,
               transform: 'translateY(-50%)',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              color: '#FFFFFF',
-              width: 36,
-              height: 36,
-              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+              bgcolor: 'rgba(0,0,0,0.4)',
+              color: '#fff',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' },
             }}
-            size="small"
           >
-            <ArrowBackIosNew fontSize="small" />
+            <ArrowBackIosNew fontSize="inherit" />
           </IconButton>
           <IconButton
             onClick={next}
+            size="small"
             sx={{
               position: 'absolute',
               top: '50%',
-              right: 12,
+              right: 8,
               transform: 'translateY(-50%)',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              color: '#FFFFFF',
-              width: 36,
-              height: 36,
-              '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.7)' },
+              bgcolor: 'rgba(0,0,0,0.4)',
+              color: '#fff',
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.6)' },
             }}
-            size="small"
           >
-            <ArrowForwardIos fontSize="small" />
+            <ArrowForwardIos fontSize="inherit" />
           </IconButton>
         </>
       )}
@@ -130,60 +109,50 @@ function Carousel({ images }: { images: string[] }) {
 }
 
 export default function RoomsPage() {
-  const [rooms, setRooms] = useState<RoomPost[]>([])
+  type RoomWithProfile = RoomPost & { profile?: Awaited<ReturnType<typeof fetchUserProfile>> }
+  const [rooms, setRooms] = useState<RoomWithProfile[]>([])
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // Filter state
-  const [priceRange, setPriceRange] = useState<number[]>([0, 1])
-  const [minPrice, setMinPrice] = useState<number>(0)
-  const [maxPrice, setMaxPrice] = useState<number>(1)
-  const [addressFilter, setAddressFilter] = useState<string>('')
+  // ─── Filters ─────────────────────────────────
+  const [addressFilter, setAddressFilter] = useState('')
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 0])
+  const [minPrice, setMinPrice] = useState(0)
+  const [maxPrice, setMaxPrice] = useState(0)
+  const [bedroomsFilter, setBedroomsFilter] = useState(0)
+  const [bathroomsFilter, setBathroomsFilter] = useState(0)
+  const [furnishedOnly, setFurnishedOnly] = useState(false)
 
-  // Pagination state
+  // ─── Pagination ───────────────────────────────
   const [page, setPage] = useState(1)
   const itemsPerPage = 6
 
   useEffect(() => {
     ;(async () => {
-      const raw: RoomPost[] = await getRoomPosts()
-
-      // Derive a simple locationLabel from the address (text before comma)
-      const withLocation = raw.map((p) => ({
-        ...p,
-        locationLabel: p.address?.split(',')[0]?.trim() || 'Other',
-      }))
-
-      // Enrich with profile if available
-      const enriched = await Promise.all(
-        withLocation.map(async (p) => {
-          let profileData:
-            | undefined
-            | { name?: string; profilePicture?: string; traits?: string[] } = undefined
+      const raw = await getRoomPosts()
+      // attach profile & sort
+      const withProfile = await Promise.all(
+        raw.map(async (p) => {
+          let profile
           try {
-            const fetchedProfile = await fetchUserProfile(p.userId)
-            profileData = fetchedProfile ? fetchedProfile : undefined
+            profile = await fetchUserProfile(p.userId)
           } catch {
-            // ignore
+            profile = undefined
           }
-          return { ...p, profile: profileData }
+          return { ...p, profile }
         })
       )
+      withProfile.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
 
-      // Sort by createdAt descending (most recent first)
-      enriched.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+      // derive slider bounds
+      const prices = withProfile.map(r => r.price ?? 0).filter(p => p > 0)
+      const low = prices.length ? Math.min(...prices) : 0
+      const high = prices.length ? Math.max(...prices) : 0
+      setMinPrice(low)
+      setMaxPrice(high)
+      setPriceRange([low, high])
 
-      // Compute actual min/max price from fetched data
-      const prices = enriched
-        .map((r) => (typeof r.price === 'number' ? r.price : 0))
-        .filter((p) => p > 0)
-      const derivedMin = prices.length ? Math.min(...prices) : 0
-      const derivedMax = prices.length ? Math.max(...prices) : derivedMin
-
-      setMinPrice(derivedMin)
-      setMaxPrice(derivedMax)
-      setPriceRange([derivedMin, derivedMax])
-      setRooms(enriched)
+      setRooms(withProfile)
       setLoading(false)
     })()
   }, [])
@@ -195,9 +164,9 @@ export default function RoomsPage() {
       return
     }
     const roomId = [user.uid, room.userId].sort().join('_')
-    createRoom(roomId, [user.uid, room.userId]).then(() => {
+    createRoom(roomId, [user.uid, room.userId]).then(() =>
       router.push(`/messages/${roomId}`)
-    })
+    )
   }
 
   if (loading) {
@@ -210,380 +179,282 @@ export default function RoomsPage() {
           height: '80vh',
         }}
       >
-        <CircularProgress sx={{ color: '#3B82F6' }} />
+        <CircularProgress color="primary" />
       </Box>
     )
   }
 
-  // Apply both filters: price + address substring (case‐insensitive)
-  const filteredRooms = rooms.filter((r) => {
-    // ALLOW posts with no price (undefined) OR those whose price falls within the slider range
+  // ─── Apply filters ────────────────────────────
+  const filtered = rooms.filter((r) => {
     const priceOK =
-      typeof r.price !== 'number' ||
+      r.price == null ||
       (r.price >= priceRange[0] && r.price <= priceRange[1])
+    const locOK =
+      !addressFilter ||
+      (r.address?.toLowerCase() || '').includes(addressFilter.toLowerCase())
+    const bedOK =
+      bedroomsFilter === 0 || (r.bedrooms ?? 0) >= bedroomsFilter
+    const bathOK =
+      bathroomsFilter === 0 || (r.bathrooms ?? 0) >= bathroomsFilter
+    const furOK = !furnishedOnly || r.furnished === true
 
-    const addressOK =
-      addressFilter.trim() === ''
-        ? true
-        : r.address
-        ? r.address.toLowerCase().includes(addressFilter.trim().toLowerCase())
-        : false
-
-    return priceOK && addressOK
+    return priceOK && locOK && bedOK && bathOK && furOK
   })
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredRooms.length / itemsPerPage)
-  const paginatedRooms = filteredRooms.slice(
+  // ─── Paginate ────────────────────────────────
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const paged = filtered.slice(
     (page - 1) * itemsPerPage,
     page * itemsPerPage
   )
 
-  // Group by locationLabel
-  const groupedByLocation: Record<string, RoomPost[]> = {}
-  paginatedRooms.forEach((r) => {
-    const key = r.locationLabel || 'Other'
-    if (!groupedByLocation[key]) groupedByLocation[key] = []
-    groupedByLocation[key].push(r)
-  })
-
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        width: '100%',
-        minHeight: '100vh',
-        background: '#F3F4F6',
-      }}
-    >
-      {/* ==========================
-            1) Left Sidebar (Filters)
-         ========================== */}
+    <Box sx={{ display: 'flex', width: '100%', minHeight: '100vh', background: '#F3F4F6' }}>
+      {/* Sidebar */}
       <Box
         sx={{
           width: { xs: '100%', sm: 300 },
           flexShrink: 0,
-          background: '#1E40AF',
-          color: '#FFFFFF',
-          px: 3,
-          py: 4,
+          bgcolor: '#1E40AF',
+          color: '#FFF',
+          p: 3,
           display: 'flex',
           flexDirection: 'column',
-          gap: 4,
+          gap: 3,
           height: '100vh',
           boxSizing: 'border-box',
+          overflowY: 'auto',
         }}
       >
-        <Typography variant="h6" sx={{ mb: 1, fontWeight: 700, letterSpacing: 1 }}>
-          Filters
-        </Typography>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>Filters</Typography>
 
-        {/* Address Filter (substring search) */}
+        {/* Location */}
         <TextField
           label="Location"
-          placeholder="e.g. Berkeley"
           fullWidth
           value={addressFilter}
-          onChange={(e) => setAddressFilter(e.target.value)}
+          onChange={e => { setAddressFilter(e.target.value); setPage(1) }}
           sx={{
-            bgcolor: '#FFFFFF',
+            bgcolor: '#FFF',
             borderRadius: 1,
             '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
             '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#93C5FD' },
             '& .MuiInputLabel-root': { color: '#CBD5E1' },
-            '& .MuiInputBase-input': { color: '#1E293B', fontWeight: 500 },
+            '& .MuiInputBase-input': { color: '#1E293B' },
             '& .MuiSvgIcon-root': { color: '#3B82F6' },
           }}
         />
 
-        {/* Price Range Slider */}
+        {/* Price */}
         <Box>
-          <Typography variant="subtitle2" sx={{ color: '#CBD5E1', mb: 1 }}>
-            Price Range
-          </Typography>
+          <Typography variant="subtitle2" sx={{ color: '#CBD5E1' }}>Price Range</Typography>
           <Slider
             value={priceRange}
-            onChange={(_, val) => {
-              if (Array.isArray(val)) setPriceRange(val)
+            onChange={(_, v) => {
+              if (Array.isArray(v)) {
+                setPriceRange([v[0], v[1]])
+                setPage(1)
+              }
             }}
-            valueLabelDisplay="auto"
             min={minPrice}
             max={maxPrice}
+            valueLabelDisplay="auto"
             sx={{
               color: '#93C5FD',
-              '& .MuiSlider-thumb': {
-                backgroundColor: '#FFFFFF',
-                border: '2px solid #3B82F6',
-              },
+              '& .MuiSlider-thumb': { bgcolor: '#FFF', border: '2px solid #3B82F6' },
             }}
           />
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-            <Typography sx={{ fontSize: '0.875rem', color: '#CBD5E1', fontWeight: 500 }}>
-              ${priceRange[0].toLocaleString()}
-            </Typography>
-            <Typography sx={{ fontSize: '0.875rem', color: '#CBD5E1', fontWeight: 500 }}>
-              ${priceRange[1].toLocaleString()}
-            </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Typography sx={{ color: '#CBD5E1' }}>${priceRange[0]}</Typography>
+            <Typography sx={{ color: '#CBD5E1' }}>${priceRange[1]}</Typography>
           </Box>
         </Box>
 
-        {/* Apply Button */}
-        <Button
-          variant="contained"
-          sx={{
-            mt: 'auto',
-            bgcolor: '#3B82F6',
-            color: '#FFFFFF',
-            textTransform: 'none',
-            fontWeight: 700,
-            '&:hover': { bgcolor: '#2563EB' },
-          }}
-          onClick={() => {
-            // Real-time filtering, so no extra logic
-          }}
+        {/* Bedrooms */}
+        <TextField
+          select
+          label="Min Bedrooms"
+          fullWidth
+          value={bedroomsFilter}
+          onChange={e => { setBedroomsFilter(Number(e.target.value)); setPage(1) }}
+          sx={{ bgcolor: '#FFF', borderRadius: 1 }}
         >
-          Apply
-        </Button>
+          <MenuItem value={0}>Any</MenuItem>
+          {[1, 2, 3, 4, 5].map(n => (
+            <MenuItem key={n} value={n}>{n}+ beds</MenuItem>
+          ))}
+        </TextField>
+
+        {/* Bathrooms */}
+        <TextField
+          select
+          label="Min Bathrooms"
+          fullWidth
+          value={bathroomsFilter}
+          onChange={e => { setBathroomsFilter(Number(e.target.value)); setPage(1) }}
+          sx={{ bgcolor: '#FFF', borderRadius: 1 }}
+        >
+          <MenuItem value={0}>Any</MenuItem>
+          {[1, 2, 3, 4].map(n => (
+            <MenuItem key={n} value={n}>{n}+ baths</MenuItem>
+          ))}
+        </TextField>
+
+        {/* Furnished */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={furnishedOnly}
+              onChange={(_, v) => { setFurnishedOnly(v); setPage(1) }}
+              sx={{ color: '#FFF', '&.Mui-checked': { color: '#3B82F6' } }}
+            />
+          }
+          label="Furnished only"
+        />
       </Box>
 
-      {/* ==========================
-            2) Right Content Area (Listings)
-         ========================== */}
-      <Box
-        sx={{
-          flexGrow: 1,
-          px: { xs: 2, sm: 4 },
-          py: 4,
-          overflowY: 'auto',
-        }}
-      >
-        {Object.entries(groupedByLocation).map(([location, roomsInLocation]) => (
-          <Box key={location} sx={{ mb: 4 }}>
-            <Typography
-              variant="h5"
-              sx={{
-                mb: 2,
-                fontWeight: 700,
-                color: '#1E40AF',
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-              }}
-            >
-              {location}
-            </Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  sm: '1fr',
-                  md: '1fr',
-                },
-                gap: 4,
-              }}
-            >
-              {roomsInLocation.map((room) => (
-                <Card
-                  key={room.id}
-                  sx={{
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: '0 8px 20px rgba(100,116,139,0.15)',
-                    },
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: 620,
+      {/* Listings */}
+      <Box sx={{ flexGrow: 1, px: { xs: 2, sm: 4 }, py: 4, overflowY: 'auto' }}>
+        {paged.map(room => (
+          <Card
+            key={room.id}
+            sx={{
+              maxWidth: 900,
+              mx: 'auto',
+              mb: 4,
+              bgcolor: '#FFF',
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+              '&:hover': {
+                transform: 'translateY(-4px)',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+              },
+            }}
+          >
+            <CardHeader
+              avatar={
+                <Avatar
+                  src={room.profile?.profilePicture}
+                  alt={room.profile?.name}
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    if (!auth.currentUser) alert('Log in to view profiles.')
+                    else router.push(`/profile/${room.userId}`)
+                  }}
+                />
+              }
+              title={
+                <Typography
+                  variant="subtitle1"
+                  sx={{ cursor: 'pointer', fontWeight: 600 }}
+                  onClick={() => {
+                    if (!auth.currentUser) alert('Log in to view profiles.')
+                    else router.push(`/profile/${room.userId}`)
                   }}
                 >
-                  {/* --- Profile Header --- */}
-                  <CardHeader
-                    avatar={
-                      <Avatar
-                        src={room.profile?.profilePicture}
-                        alt={room.profile?.name || 'User'}
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => {
-                          if (!auth.currentUser) {
-                            alert('You must be logged in to view profiles.')
-                          } else {
-                            router.push(`/profile/${room.userId}`)
-                          }
-                        }}
-                      />
-                    }
-                    title={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ cursor: 'pointer', fontWeight: 600 }}
-                          onClick={() => {
-                            if (!auth.currentUser) {
-                              alert('You must be logged in to view profiles.')
-                            } else {
-                              router.push(`/profile/${room.userId}`)
-                            }
-                          }}
-                        >
-                          {room.profile?.name || 'Unknown User'}
-                        </Typography>
-                        {auth.currentUser && (
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => router.push(`/profile/${room.userId}`)}
-                            sx={{ textTransform: 'none' }}
-                          >
-                            View Profile
-                          </Button>
-                        )}
-                      </Box>
-                    }
-                    subheader={(room.profile?.traits || []).slice(0, 2).join(', ')}
-                    sx={{ px: 2, py: 1 }}
-                  />
+                  {room.profile?.name || 'Unknown'}
+                </Typography>
+              }
+              subheader={Array.isArray((room.profile as any)?.interests) ? (room.profile as any).interests.slice(0, 2).join(', ') : ''}
+              sx={{ px: 2, py: 1 }}
+            />
 
-                  {/* --- Image Carousel --- */}
-                  <Carousel images={room.images} />
-
-                  {/* --- Content Area --- */}
-                  <CardContent
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' } }}>
+              <Box sx={{ flexBasis: { xs: '100%', md: '40%' }, p: 2 }}>
+                <Carousel images={room.images} />
+              </Box>
+              <CardContent sx={{ flex: 1, p: 3, display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 700, mb: 1, color: '#1E40AF' }}>
+                    {room.title}
+                  </Typography>
+                  <Typography
+                    variant="body2"
                     sx={{
-                      flexBasis: '30%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      justifyContent: 'space-between',
-                      px: 3,
-                      py: 2,
+                      mb: 2,
+                      color: '#334155',
+                      lineHeight: 1.4,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: 'vertical',
+                      display: '-webkit-box',
                     }}
                   >
-                    <Box>
-                      <Typography
-                        variant="h6"
-                        sx={{
-                          fontWeight: 700,
-                          mb: 0.5,
-                          color: '#1E40AF',
-                          letterSpacing: 0.5,
-                          lineHeight: 1.2,
-                          maxHeight: '2.8em',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          display: '-webkit-box',
-                        }}
-                      >
-                        {room.title}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          mb: 0.5,
-                          color: '#334155',
-                          fontStyle: 'italic',
-                          lineHeight: 1.3,
-                          maxHeight: '3.9em',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical',
-                          display: '-webkit-box',
-                        }}
-                      >
-                        {room.description}
-                      </Typography>
-                      {room.address && (
-                        <Typography
-                          sx={{
-                            fontSize: '0.875rem',
-                            color: '#64748B',
-                            mb: 1,
-                            fontWeight: 500,
-                          }}
-                        >
-                          {room.address}
-                        </Typography>
-                      )}
-                    </Box>
+                    {room.description}
+                  </Typography>
+                  {room.address && (
+                    <Typography variant="caption" sx={{ color: '#64748B' }}>
+                      {room.address}
+                    </Typography>
+                  )}
+                </Box>
 
-                    <Box>
-                      <Box
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                  <Typography variant="h6" sx={{ color: '#3B82F6', fontWeight: 700 }}>
+                    ${room.price?.toLocaleString()}/mo
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 3 }}>
+                    {room.bedrooms != null && (
+                      <Typography
+                        variant="subtitle2"
                         sx={{
                           display: 'flex',
-                          justifyContent: 'space-between',
                           alignItems: 'center',
-                          mb: 1,
+                          gap: 0.5,
+                          color: '#4B5563',
                         }}
                       >
-                        {typeof room.price === 'number' && (
-                          <Typography sx={{ color: '#3B82F6', fontWeight: 700 }}>
-                            ${room.price.toLocaleString()}/mo
-                          </Typography>
-                        )}
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          {room.bedrooms != null && (
-                            <Typography sx={{ fontSize: '0.875rem', color: '#4B5563' }}>
-                              🛏 {room.bedrooms}
-                            </Typography>
-                          )}
-                          {room.bathrooms != null && (
-                            <Typography sx={{ fontSize: '0.875rem', color: '#4B5563' }}>
-                              🛁 {room.bathrooms}
-                            </Typography>
-                          )}
-                          {room.sqft != null && (
-                            <Typography sx={{ fontSize: '0.875rem', color: '#4B5563' }}>
-                              📐 {room.sqft} sqft
-                            </Typography>
-                          )}
-                        </Box>
-                      </Box>
+                        <BedIcon fontSize="small" /> {room.bedrooms}
+                      </Typography>
+                    )}
+                    {room.bathrooms != null && (
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 0.5,
+                          color: '#4B5563',
+                        }}
+                      >
+                        <BathtubIcon fontSize="small" /> {room.bathrooms}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
 
-                      <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button
-                          size="small"
-                          startIcon={<ChatIcon />}
-                          onClick={() => handleChat(room)}
-                          sx={{
-                            color: '#FFFFFF',
-                            bgcolor: '#3B82F6',
-                            textTransform: 'none',
-                            fontWeight: 600,
-                            boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
-                            '&:hover': {
-                              bgcolor: '#2563EB',
-                              boxShadow: '0 6px 18px rgba(59,130,246,0.4)',
-                            },
-                          }}
-                        >
-                          Contact
-                        </Button>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
+                <Box sx={{ mt: 'auto', display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    size="small"
+                    startIcon={<ChatIcon />}
+                    onClick={() => handleChat(room)}
+                    sx={{
+                      color: '#FFF',
+                      bgcolor: '#3B82F6',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      '&:hover': { bgcolor: '#2563EB' },
+                    }}
+                  >
+                    Contact
+                  </Button>
+                </Box>
+              </CardContent>
             </Box>
-          </Box>
+          </Card>
         ))}
 
-        {/* ============ Pagination Controls ============ */}
         {totalPages > 1 && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <Pagination
               count={totalPages}
               page={page}
-              onChange={handlePageChange}
+              onChange={(_, v) => {
+                setPage(v)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
               color="primary"
             />
           </Box>
