@@ -28,6 +28,7 @@ interface RoomDoc {
   typing: Record<string, boolean>
   unreadCounts: Record<string, number>
   participantsMeta: Record<string, { name: string, avatarUrl?: string }>
+  createdAt?: FirebaseFirestore.Timestamp
 }
 
 /**
@@ -170,25 +171,25 @@ interface RoomSummary {
   id: string
   participants: string[]
   unreadCount: number
+  createdAt: number
 }
 
 /**
  * List paginated rooms you participate in, with unread‐message counts.
- * Pass limitCount for how many rooms to fetch, and startAfterRoomId for pagination.
+ * Pass limitCount for how many rooms to fetch, and startAfterCreatedAt for pagination.
  */
 export async function getRooms(
   userId: string,
   limitCount: number = 20,
-  startAfterRoomId?: string
+  startAfterCreatedAt?: number
 ): Promise<RoomSummary[]> {
   const roomsRef = collection(db, 'messages')
   let qBase = query(roomsRef, where('participants', 'array-contains', userId))
   let q
-  if (startAfterRoomId) {
-    const startDoc = await getDoc(doc(db, 'messages', startAfterRoomId))
-    q = query(qBase, orderBy('id'), startAfter(startDoc), limit(limitCount))
+  if (startAfterCreatedAt) {
+    q = query(qBase, orderBy('createdAt', 'desc'), startAfter(startAfterCreatedAt), limit(limitCount))
   } else {
-    q = query(qBase, limit(limitCount))
+    q = query(qBase, orderBy('createdAt', 'desc'), limit(limitCount))
   }
   const snap = await getDocs(q)
   return snap.docs.map((d: QueryDocumentSnapshot<DocumentData>) => {
@@ -199,6 +200,7 @@ export async function getRooms(
       id: roomId,
       participants: data.participants,
       unreadCount,
+      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : 0,
     }
   })
 }

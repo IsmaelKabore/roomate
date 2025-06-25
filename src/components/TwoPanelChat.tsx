@@ -48,6 +48,7 @@ interface RoomSummary {
   id: string
   participants: string[]
   unreadCount: number
+  createdAt: number
 }
 
 interface InboxItem {
@@ -82,7 +83,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   const [hasMoreRooms, setHasMoreRooms] = useState(true)
   const [loadingMoreRooms, setLoadingMoreRooms] = useState(false)
   const ROOMS_PAGE_SIZE = 20
-  const lastRoomIdRef = useRef<string | null>(null)
+  const lastRoomCreatedAtRef = useRef<number | null>(null)
 
   // ─── Which room is currently open ────────────────────────────────
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
@@ -106,6 +107,8 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   const [fetchingSuggestions, setFetchingSuggestions] = useState(false)
 
   const smartReplyTimeout = useRef<NodeJS.Timeout | null>(null)
+
+  const inboxListRef = useRef<HTMLUListElement>(null)
 
   // Helper to fetch smart replies from our API
   async function fetchSmartReplies(latestIncoming: string) {
@@ -184,11 +187,11 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   const loadRooms = useCallback(async (append = false) => {
     if (append) setLoadingMoreRooms(true)
     else setInboxLoading(true)
-    const lastRoomId = append && lastRoomIdRef.current ? lastRoomIdRef.current : undefined
-    const rooms: RoomSummary[] = await getRooms(currentUser.uid, ROOMS_PAGE_SIZE, lastRoomId)
+    const lastCreatedAt = append && lastRoomCreatedAtRef.current ? lastRoomCreatedAtRef.current : undefined
+    const rooms: RoomSummary[] = await getRooms(currentUser.uid, ROOMS_PAGE_SIZE, lastCreatedAt)
     setInboxItems((prev) => append ? [...prev, ...rooms] : rooms)
     setHasMoreRooms(rooms.length === ROOMS_PAGE_SIZE)
-    if (rooms.length > 0) lastRoomIdRef.current = rooms[rooms.length - 1].id
+    if (rooms.length > 0) lastRoomCreatedAtRef.current = rooms[rooms.length - 1].createdAt
     if (append) setLoadingMoreRooms(false)
     else setInboxLoading(false)
   }, [currentUser])
@@ -251,6 +254,15 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
         </Box>
       </div>
     )
+  }
+
+  // Infinite scroll handler for inbox
+  const handleInboxScroll = () => {
+    const el = inboxListRef.current
+    if (!el || loadingMoreRooms || !hasMoreRooms) return
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 60) {
+      handleLoadMoreRooms()
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════
@@ -471,7 +483,12 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
           </Box>
         ) : (
           <>
-            <List disablePadding sx={{ overflowY: 'auto', flex: 1 }}>
+            <List
+              disablePadding
+              sx={{ overflowY: 'auto', flex: 1 }}
+              ref={inboxListRef}
+              onScroll={handleInboxScroll}
+            >
               {inboxItems.map((it, idx) => {
                 const isActive = it.id === activeRoomId
                 return (
@@ -576,13 +593,6 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                 )
               })}
             </List>
-            {hasMoreRooms && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
-                <Button onClick={handleLoadMoreRooms} disabled={loadingMoreRooms} size="small" variant="outlined">
-                  {loadingMoreRooms ? 'Loading...' : 'Load More'}
-                </Button>
-              </Box>
-            )}
           </>
         )}
       </Paper>
