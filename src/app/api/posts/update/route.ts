@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import admin from 'firebase-admin'
 import { getOpenAIEmbedding } from '@/lib/openai-embed'
+import { extractKeywordsFromDescription } from '@/lib/enhancedMatching'
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -52,6 +53,9 @@ export async function POST(request: Request) {
     const combined = [body.title, body.description, body.address].join('\n')
     const embedding = await getOpenAIEmbedding(combined)
 
+    // Extract keywords if not provided or empty
+    let finalKeywords = Array.isArray(body.keywords) && body.keywords.length > 0 ? body.keywords : await extractKeywordsFromDescription(body.description || '')
+
     await ref.update({
       title: body.title.trim(),
       description: body.description.trim(),
@@ -59,7 +63,7 @@ export async function POST(request: Request) {
       price: body.price ?? null,
       images: body.images,
       type: body.type,
-      keywords: body.keywords,
+      keywords: finalKeywords,
       structured: {
         bedrooms: body.bedrooms,
         bathrooms: body.bathrooms,

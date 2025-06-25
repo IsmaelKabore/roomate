@@ -2,8 +2,7 @@
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getOpenAIEmbedding } from "@/lib/openai-embed";
-import { fetchEnhancedMatches } from "@/lib/matching";
+import { fetchEnhancedMatchesV2, extractKeywordsFromDescription } from "@/lib/enhancedMatching";
 import type { StructuredFilters } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -74,16 +73,16 @@ export async function POST(req: NextRequest) {
 
     // Try to use real matching logic, but fall back to mock data if it fails
     try {
-      const userEmbedding = await getOpenAIEmbedding(description.trim());
-      const matches = await fetchEnhancedMatches(
-        userEmbedding,
+      // Extract keywords from the user description
+      const userKeywords = await extractKeywordsFromDescription(description.trim());
+      const matches = await fetchEnhancedMatchesV2(
+        description.trim(),
+        userKeywords,
         structuredFilters,
         searchType,
         userId,
         5
       );
-      
-      // If we get real matches, return them, otherwise use mock data
       if (matches && matches.length > 0) {
         return NextResponse.json({ matches });
       }

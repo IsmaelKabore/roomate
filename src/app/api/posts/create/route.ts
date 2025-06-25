@@ -1,6 +1,7 @@
 // File: src/app/api/posts/create/route.ts
 import { NextResponse } from 'next/server'
 import admin from 'firebase-admin'
+import { extractKeywordsFromDescription } from '@/lib/enhancedMatching'
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -49,6 +50,9 @@ export async function POST(req: Request) {
       )
     }
 
+    // Extract keywords if not provided or empty
+    let finalKeywords = Array.isArray(keywords) && keywords.length > 0 ? keywords : await extractKeywordsFromDescription(description || '')
+
     const docData: any = {
       title: type === 'room' ? title.trim() : '',
       description: description.trim(),
@@ -57,7 +61,7 @@ export async function POST(req: Request) {
       userId,
       type,
       price: type === 'room' ? price : null,
-      keywords,
+      keywords: finalKeywords,
       structured: type === 'room'
         ? { bedrooms, bathrooms, furnished }
         : { bedrooms: null, bathrooms: null, furnished: null },
