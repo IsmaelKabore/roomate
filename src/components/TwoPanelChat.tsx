@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { FixedSizeList as List, ListChildComponentProps } from 'react-window'
 
 import {
   Box,
   Paper,
-  List,
   ListItemButton,
   ListItemAvatar,
   Avatar,
@@ -18,6 +18,7 @@ import {
   InputBase,
   CircularProgress,
   Chip,
+  Button,
 } from '@mui/material'
 
 import SearchIcon from '@mui/icons-material/Search'
@@ -78,6 +79,10 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   // ─── Sidebar "inbox" state ──────────────────────────────────────
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([])
   const [inboxLoading, setInboxLoading] = useState(true)
+  const [hasMoreRooms, setHasMoreRooms] = useState(true)
+  const [loadingMoreRooms, setLoadingMoreRooms] = useState(false)
+  const ROOMS_PAGE_SIZE = 20
+  const lastRoomIdRef = useRef<string | null>(null)
 
   // ─── Which room is currently open ────────────────────────────────
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null)
@@ -85,6 +90,10 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   // ─── Real-time messages + loading for the active room ───────────
   const [messages, setMessages] = useState<MessageDoc[]>([])
   const [msgLoading, setMsgLoading] = useState(false)
+  const [hasMoreMessages, setHasMoreMessages] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const MESSAGES_PAGE_SIZE = 30
+  const unsubRef = useRef<null | (() => void)>(null)
 
   // ─── New message input state ────────────────────────────────────
   const [newMsgText, setNewMsgText] = useState('')
@@ -95,6 +104,8 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   // ─── Smart-Reply state ───────────────────────────────────────────
   const [smartSuggestions, setSmartSuggestions] = useState<string[]>([])
   const [fetchingSuggestions, setFetchingSuggestions] = useState(false)
+
+  const smartReplyTimeout = useRef<NodeJS.Timeout | null>(null)
 
   // Helper to fetch smart replies from our API
   async function fetchSmartReplies(latestIncoming: string) {
@@ -134,6 +145,114 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
     }
   }
 
+  // Debounced smart reply fetch
+  const debouncedFetchSmartReplies = useCallback((latestIncoming: string) => {
+    if (smartReplyTimeout.current) clearTimeout(smartReplyTimeout.current)
+    smartReplyTimeout.current = setTimeout(() => {
+      fetchSmartReplies(latestIncoming)
+    }, 1000)
+  }, [])
+
+  // Helper to load messages (paginated)
+  const loadMessages = useCallback((roomId: string, append = false, startAfterTimestamp?: number) => {
+    setMsgLoading(!append)
+    setLoadingMore(append)
+    if (unsubRef.current) unsubRef.current()
+    unsubRef.current = onMessagesSnapshot(
+      roomId,
+      (msgs) => {
+        // Firestore returns newest first, so reverse for display
+        const newMsgs = [...msgs].reverse()
+        setMessages((prev) => {
+          if (append) {
+            // Append older messages at the start
+            return [...newMsgs, ...prev]
+          } else {
+            return newMsgs
+          }
+        })
+        setHasMoreMessages(newMsgs.length === MESSAGES_PAGE_SIZE)
+        setMsgLoading(false)
+        setLoadingMore(false)
+      },
+      MESSAGES_PAGE_SIZE,
+      startAfterTimestamp
+    )
+  }, [])
+
+  // Helper to load rooms (paginated)
+  const loadRooms = useCallback(async (append = false) => {
+    if (append) setLoadingMoreRooms(true)
+    else setInboxLoading(true)
+    const lastRoomId = append && lastRoomIdRef.current ? lastRoomIdRef.current : undefined
+    const rooms: RoomSummary[] = await getRooms(currentUser.uid, ROOMS_PAGE_SIZE, lastRoomId)
+    setInboxItems((prev) => append ? [...prev, ...rooms] : rooms)
+    setHasMoreRooms(rooms.length === ROOMS_PAGE_SIZE)
+    if (rooms.length > 0) lastRoomIdRef.current = rooms[rooms.length - 1].id
+    if (append) setLoadingMoreRooms(false)
+    else setInboxLoading(false)
+  }, [currentUser])
+
+  // Helper to render a single message row for react-window
+  const MessageRow = ({ index, style }: ListChildComponentProps) => {
+    const m = messages[index]
+    const isMe = m.senderId === currentUser.uid
+    return (
+      <div style={style}>
+        <Box
+          sx={{
+            alignSelf: isMe ? 'flex-end' : 'flex-start',
+            maxWidth: '75%',
+            mb: 1,
+          }}
+        >
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              background: isMe
+                ? 'var(--gradient-primary)'
+                : 'var(--background-card)',
+              color: isMe ? 'white' : 'var(--foreground)',
+              borderRadius: '18px',
+              borderTopLeftRadius: isMe ? '18px' : '6px',
+              borderTopRightRadius: isMe ? '6px' : '18px',
+              border: isMe ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: isMe ? '0 4px 12px rgba(0, 122, 255, 0.3)' : 'none',
+            }}
+          >
+            <Typography
+              variant="body1"
+              sx={{ 
+                lineHeight: 1.5, 
+                wordBreak: 'break-word',
+                fontSize: '0.95rem',
+              }}
+            >
+              {m.text}
+            </Typography>
+          </Paper>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'var(--foreground-secondary)',
+              fontSize: '0.75rem',
+              mt: 0.5,
+              display: 'block',
+              textAlign: isMe ? 'right' : 'left',
+              px: 1,
+            }}
+          >
+            {new Date(m.timestamp).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </Typography>
+        </Box>
+      </div>
+    )
+  }
+
   // ══════════════════════════════════════════════════════════════════
   // 1) Load current user's inbox (list of rooms) and set initial room
   // ══════════════════════════════════════════════════════════════════
@@ -143,67 +262,10 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
       return
     }
 
-    async function loadInbox() {
-      try {
-        if (!currentUser) {
-          console.error('User is not authenticated')
-          return
-        }
-        const rooms: RoomSummary[] = await getRooms(currentUser.uid)
-        const items: InboxItem[] = await Promise.all(
-          rooms.map(async (room) => {
-            const otherId =
-              room.participants.find((uid) => uid !== currentUser.uid) || ''
-            let name = 'Unknown User'
-            let avatarUrl: string | undefined
-
-            if (otherId) {
-              const profile = await fetchUserProfile(otherId).catch(() => null)
-              name = profile?.name || otherId
-              avatarUrl = profile?.profilePicture
-            }
-
-            return {
-              id: room.id,
-              otherId,
-              name,
-              avatarUrl,
-              latestText: '',
-              latestTimestamp: 0,
-              unreadCount: room.unreadCount,
-            }
-          })
-        )
-
-        console.log('→ [TwoPanelChat] loaded inbox items:', items)
-        setInboxItems(items)
-        setInboxLoading(false)
-
-        if (initialRoomId) {
-          setActiveRoomId(initialRoomId)
-        } else if (items.length > 0) {
-          setActiveRoomId(items[0].id)
-        }
-      } catch (err) {
-        console.error('Error loading inbox:', err)
-        setInboxLoading(false)
-      }
-    }
-
-    loadInbox()
-  }, [currentUser, initialRoomId, router])
-
-  // ══════════════════════════════════════════════════════════════════
-  // 2) When activeRoomId changes, subscribe to messages & typing flags
-  // ══════════════════════════════════════════════════════════════════
-  useEffect(() => {
-    if (!activeRoomId || !currentUser) return
+    loadRooms()
 
     async function initRoomAndSubscribe() {
       try {
-        setMsgLoading(true)
-        setMessages([])
-
         // Subscribe to real-time messages
         const unsubMessages = onMessagesSnapshot(activeRoomId!, (msgs) => {
           console.log('→ [TwoPanelChat] received messages:', msgs.length)
@@ -219,7 +281,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
           if (msgs.length > 0 && currentUser) {
             const latestMsg = msgs[msgs.length - 1]
             if (latestMsg.senderId !== currentUser.uid && latestMsg.text) {
-              fetchSmartReplies(latestMsg.text)
+              debouncedFetchSmartReplies(latestMsg.text)
             }
           }
         })
@@ -230,6 +292,8 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
         }
 
         return () => {
+          if (unsubRef.current) unsubRef.current()
+          if (smartReplyTimeout.current) clearTimeout(smartReplyTimeout.current)
           unsubMessages()
         }
       } catch (err) {
@@ -239,10 +303,10 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
     }
 
     initRoomAndSubscribe()
-  }, [activeRoomId, currentUser])
+  }, [currentUser, initialRoomId, router, loadRooms])
 
   // ══════════════════════════════════════════════════════════════════
-  // 3) Handle sending a message
+  // 2) Handle sending a message
   // ══════════════════════════════════════════════════════════════════
   const handleSend = async () => {
     if (!newMsgText.trim() || !activeRoomId || !currentUser) return
@@ -266,6 +330,19 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
     } catch (err) {
       console.error('Error setting typing status:', err)
     }
+  }
+
+  // Handler for loading more messages
+  const handleLoadMore = () => {
+    if (messages.length > 0) {
+      const oldest = messages[0]
+      loadMessages(activeRoomId!, true, oldest.timestamp)
+    }
+  }
+
+  // Handler for loading more rooms
+  const handleLoadMoreRooms = () => {
+    loadRooms(true)
   }
 
   // Show loading if we don't have current user
@@ -393,111 +470,120 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
             </Typography>
           </Box>
         ) : (
-          <List disablePadding sx={{ overflowY: 'auto', flex: 1 }}>
-            {inboxItems.map((it, idx) => {
-              const isActive = it.id === activeRoomId
-              return (
-                <Box key={it.id}>
-                  <ListItemButton
-                    onClick={() => {
-                      setActiveRoomId(it.id)
-                      router.push(`/messages/${it.id}`, { scroll: false })
-                    }}
-                    sx={{
-                      py: 2,
-                      px: 3,
-                      background: isActive ? 'var(--primary)' : 'transparent',
-                      '&:hover': {
-                        background: isActive ? 'var(--primary-hover)' : 'rgba(255, 255, 255, 0.05)',
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Badge
-                        badgeContent={it.unreadCount}
-                        color="error"
-                        invisible={it.unreadCount === 0}
-                        sx={{
-                          '& .MuiBadge-badge': {
-                            backgroundColor: '#ff4757',
-                            color: '#fff',
+          <>
+            <List disablePadding sx={{ overflowY: 'auto', flex: 1 }}>
+              {inboxItems.map((it, idx) => {
+                const isActive = it.id === activeRoomId
+                return (
+                  <Box key={it.id}>
+                    <ListItemButton
+                      onClick={() => {
+                        setActiveRoomId(it.id)
+                        router.push(`/messages/${it.id}`, { scroll: false })
+                      }}
+                      sx={{
+                        py: 2,
+                        px: 3,
+                        background: isActive ? 'var(--primary)' : 'transparent',
+                        '&:hover': {
+                          background: isActive ? 'var(--primary-hover)' : 'rgba(255, 255, 255, 0.05)',
+                        },
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <ListItemAvatar>
+                        <Badge
+                          badgeContent={it.unreadCount}
+                          color="error"
+                          invisible={it.unreadCount === 0}
+                          sx={{
+                            '& .MuiBadge-badge': {
+                              backgroundColor: '#ff4757',
+                              color: '#fff',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              minWidth: 18,
+                              height: 18,
+                            },
+                          }}
+                        >
+                          <Avatar
+                            src={it.avatarUrl}
+                            sx={{
+                              width: 48,
+                              height: 48,
+                              bgcolor: 'var(--gradient-primary)',
+                              color: 'white',
+                              fontWeight: 600,
+                              fontSize: '1.1rem',
+                            }}
+                          >
+                            {!it.avatarUrl && it.name.charAt(0).toUpperCase()}
+                          </Avatar>
+                        </Badge>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <Typography
+                            sx={{
+                              fontWeight: isActive ? 600 : 500,
+                              fontSize: '1rem',
+                              color: isActive ? 'white' : 'var(--foreground)',
+                              mb: 0.5,
+                            }}
+                            noWrap
+                          >
+                            {it.name}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography
+                            sx={{
+                              fontSize: '0.85rem',
+                              color: isActive ? 'rgba(255, 255, 255, 0.8)' : 'var(--foreground-secondary)',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: 200,
+                            }}
+                          >
+                            {it.latestText || 'No messages yet'}
+                          </Typography>
+                        }
+                      />
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ 
+                            color: isActive ? 'rgba(255, 255, 255, 0.7)' : 'var(--foreground-secondary)', 
                             fontSize: '0.75rem',
-                            fontWeight: 600,
-                            minWidth: 18,
-                            height: 18,
-                          },
-                        }}
-                      >
-                        <Avatar
-                          src={it.avatarUrl}
-                          sx={{
-                            width: 48,
-                            height: 48,
-                            bgcolor: 'var(--gradient-primary)',
-                            color: 'white',
-                            fontWeight: 600,
-                            fontSize: '1.1rem',
+                            fontWeight: 500,
                           }}
                         >
-                          {!it.avatarUrl && it.name.charAt(0).toUpperCase()}
-                        </Avatar>
-                      </Badge>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography
-                          sx={{
-                            fontWeight: isActive ? 600 : 500,
-                            fontSize: '1rem',
-                            color: isActive ? 'white' : 'var(--foreground)',
-                            mb: 0.5,
-                          }}
-                          noWrap
-                        >
-                          {it.name}
+                          {it.latestTimestamp > 0
+                            ? new Date(it.latestTimestamp).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : ''}
                         </Typography>
-                      }
-                      secondary={
-                        <Typography
-                          sx={{
-                            fontSize: '0.85rem',
-                            color: isActive ? 'rgba(255, 255, 255, 0.8)' : 'var(--foreground-secondary)',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            maxWidth: 200,
-                          }}
-                        >
-                          {it.latestText || 'No messages yet'}
-                        </Typography>
-                      }
-                    />
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
-                      <Typography
-                        variant="caption"
-                        sx={{ 
-                          color: isActive ? 'rgba(255, 255, 255, 0.7)' : 'var(--foreground-secondary)', 
-                          fontSize: '0.75rem',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {it.latestTimestamp > 0
-                          ? new Date(it.latestTimestamp).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : ''}
-                      </Typography>
-                    </Box>
-                  </ListItemButton>
-                  {idx < inboxItems.length - 1 && (
-                    <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', mx: 3 }} />
-                  )}
-                </Box>
-              )
-            })}
-          </List>
+                      </Box>
+                    </ListItemButton>
+                    {idx < inboxItems.length - 1 && (
+                      <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', mx: 3 }} />
+                    )}
+                  </Box>
+                )
+              })}
+            </List>
+            {hasMoreRooms && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                <Button onClick={handleLoadMoreRooms} disabled={loadingMoreRooms} size="small" variant="outlined">
+                  {loadingMoreRooms ? 'Loading...' : 'Load More'}
+                </Button>
+              </Box>
+            )}
+          </>
         )}
       </Paper>
 
@@ -637,6 +723,13 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                 gap: 2,
               }}
             >
+              {hasMoreMessages && messages.length > 0 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                  <Button onClick={handleLoadMore} disabled={loadingMore} size="small" variant="outlined">
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </Button>
+                </Box>
+              )}
               {msgLoading ? (
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
                   <CircularProgress sx={{ color: 'var(--primary)' }} size={28} />
@@ -670,62 +763,15 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                   </Typography>
                 </Box>
               ) : (
-                messages.map((m, idx) => {
-                  const isMe = m.senderId === currentUser.uid
-                  return (
-                    <Box
-                      key={idx}
-                      sx={{
-                        alignSelf: isMe ? 'flex-end' : 'flex-start',
-                        maxWidth: '75%',
-                        mb: 1,
-                      }}
-                    >
-                      <Paper
-                        elevation={0}
-                        sx={{
-                          p: 2,
-                          background: isMe
-                            ? 'var(--gradient-primary)'
-                            : 'var(--background-card)',
-                          color: isMe ? 'white' : 'var(--foreground)',
-                          borderRadius: '18px',
-                          borderTopLeftRadius: isMe ? '18px' : '6px',
-                          borderTopRightRadius: isMe ? '6px' : '18px',
-                          border: isMe ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
-                          boxShadow: isMe ? '0 4px 12px rgba(0, 122, 255, 0.3)' : 'none',
-                        }}
-                      >
-                        <Typography
-                          variant="body1"
-                          sx={{ 
-                            lineHeight: 1.5, 
-                            wordBreak: 'break-word',
-                            fontSize: '0.95rem',
-                          }}
-                        >
-                          {m.text}
-                        </Typography>
-                      </Paper>
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          color: 'var(--foreground-secondary)',
-                          fontSize: '0.75rem',
-                          mt: 0.5,
-                          display: 'block',
-                          textAlign: isMe ? 'right' : 'left',
-                          px: 1,
-                        }}
-                      >
-                        {new Date(m.timestamp).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </Typography>
-                    </Box>
-                  )
-                })
+                <List
+                  height={500}
+                  itemCount={messages.length}
+                  itemSize={80}
+                  width={'100%'}
+                  style={{ flex: 1 }}
+                >
+                  {MessageRow}
+                </List>
               )}
               <div ref={bottomRef} />
             </Box>
