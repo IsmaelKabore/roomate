@@ -12,8 +12,9 @@ import {
   Button,
   CircularProgress,
   Pagination,
+  IconButton,
 } from '@mui/material'
-import { ArrowBackIos, ArrowForwardIos, Chat as ChatIcon } from '@mui/icons-material'
+import { ArrowBackIos, ArrowForwardIos, Chat as ChatIcon, Favorite, FavoriteBorder } from '@mui/icons-material'
 import { useRouter } from 'next/navigation'
 import { getRoommatePosts } from '@/lib/firestorePosts'
 import { fetchUserProfile } from '@/lib/firestoreProfile'
@@ -35,8 +36,8 @@ type RoommatePost = {
   }
 }
 
-// Memoized carousel component for better performance
-const Carousel = React.memo(({ images }: { images: string[] }) => {
+// Memoized square carousel component for better performance
+const SquareCarousel = React.memo(({ images }: { images: string[] }) => {
   const [current, setCurrent] = useState(0)
   const prev = () => setCurrent((c) => (c - 1 + images.length) % images.length)
   const next = () => setCurrent((c) => (c + 1) % images.length)
@@ -45,36 +46,84 @@ const Carousel = React.memo(({ images }: { images: string[] }) => {
     return (
       <Box
         sx={{
-          height: 300,
+          width: '100%',
+          aspectRatio: '1/1',
           backgroundColor: 'var(--background-secondary)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          borderRadius: '12px 12px 0 0',
+          borderRadius: '16px 16px 0 0',
+          position: 'relative',
         }}
       >
-        <Typography sx={{ color: 'var(--foreground-secondary)' }}>No Image</Typography>
+        <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>No Image</Typography>
       </Box>
     )
   }
 
   return (
-    <Box sx={{ position: 'relative', height: 300, overflow: 'hidden', borderRadius: '12px 12px 0 0' }}>
+    <Box sx={{ 
+      position: 'relative', 
+      width: '100%',
+      aspectRatio: '1/1',
+      overflow: 'hidden', 
+      borderRadius: '16px 16px 0 0',
+      '&:hover .carousel-controls': {
+        opacity: 1,
+      }
+    }}>
       <Box
         component="img"
         src={images[current]}
         alt={`carousel-${current}`}
         sx={{
           width: '100%',
-          height: 300,
+          height: '100%',
           objectFit: 'cover',
+          transition: 'transform 0.3s ease',
         }}
-        loading="lazy" // Add lazy loading for images
+        loading="lazy"
       />
+      
+      {/* Image indicators */}
+      {images.length > 1 && (
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            gap: 0.5,
+            zIndex: 2,
+          }}
+        >
+          {images.map((_, idx) => (
+            <Box
+              key={idx}
+              onClick={() => setCurrent(idx)}
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: idx === current ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  backgroundColor: '#ffffff',
+                  transform: 'scale(1.2)',
+                }
+              }}
+            />
+          ))}
+        </Box>
+      )}
+      
       {images.length > 1 && (
         <>
-          <Button
+          <IconButton
             onClick={prev}
+            className="carousel-controls"
             sx={{
               position: 'absolute',
               top: '50%',
@@ -82,20 +131,21 @@ const Carousel = React.memo(({ images }: { images: string[] }) => {
               transform: 'translateY(-50%)',
               backgroundColor: 'rgba(0, 0, 0, 0.6)',
               color: '#ffffff',
-              minWidth: '32px',
-              p: 0.5,
-              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              opacity: 0,
+              transition: 'all 0.2s ease',
               '&:hover': { 
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                transform: 'translateY(-50%) scale(1.1)',
               },
-              transition: 'background-color 0.2s ease',
             }}
-            size="small"
           >
             <ArrowBackIos fontSize="small" />
-          </Button>
-          <Button
+          </IconButton>
+          <IconButton
             onClick={next}
+            className="carousel-controls"
             sx={{
               position: 'absolute',
               top: '50%',
@@ -103,32 +153,33 @@ const Carousel = React.memo(({ images }: { images: string[] }) => {
               transform: 'translateY(-50%)',
               backgroundColor: 'rgba(0, 0, 0, 0.6)',
               color: '#ffffff',
-              minWidth: '32px',
-              p: 0.5,
-              borderRadius: '50%',
+              width: 36,
+              height: 36,
+              opacity: 0,
+              transition: 'all 0.2s ease',
               '&:hover': { 
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                transform: 'translateY(-50%) scale(1.1)',
               },
-              transition: 'background-color 0.2s ease',
             }}
-            size="small"
           >
             <ArrowForwardIos fontSize="small" />
-          </Button>
+          </IconButton>
         </>
       )}
     </Box>
   )
 })
 
-Carousel.displayName = 'Carousel'
+SquareCarousel.displayName = 'SquareCarousel'
 
 export default function RoommatesPage() {
   const [posts, setPosts] = useState<RoommatePost[]>([])
   const [loading, setLoading] = useState(true)
   const [profilesLoading, setProfilesLoading] = useState(false)
   const [page, setPage] = useState(1)
-  const itemsPerPage = 5
+  const [favorites, setFavorites] = useState<Set<string>>(new Set())
+  const itemsPerPage = 12 // Increased for grid layout
   const router = useRouter()
 
   useEffect(() => {
@@ -210,6 +261,18 @@ export default function RoommatesPage() {
     })
   }
 
+  const toggleFavorite = (postId: string) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev)
+      if (newFavorites.has(postId)) {
+        newFavorites.delete(postId)
+      } else {
+        newFavorites.add(postId)
+      }
+      return newFavorites
+    })
+  }
+
   if (loading) {
     return (
       <Box 
@@ -242,22 +305,47 @@ export default function RoommatesPage() {
         minHeight: '100vh',
         background: 'var(--gradient-background)',
         color: 'var(--foreground)',
-        p: 4,
+        p: { xs: 2, md: 4 },
       }}
     >
-      <Typography
-        variant="h4"
-        sx={{
-          mb: 4,
-          textAlign: 'center',
-          background: 'var(--gradient-primary)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          fontWeight: 700,
-        }}
-      >
-        Find Roommates
-      </Typography>
+      <Box sx={{ textAlign: 'center', mb: 6 }}>
+        <Typography
+          variant="h3"
+          sx={{
+            mb: 2,
+            background: 'var(--gradient-primary)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            fontWeight: 700,
+            fontSize: { xs: '2.5rem', md: '3.5rem' },
+          }}
+        >
+          Meet Your Perfect Roommate
+        </Typography>
+        <Typography
+          sx={{
+            color: 'var(--foreground-secondary)',
+            fontSize: '1.2rem',
+            maxWidth: '600px',
+            mx: 'auto',
+            lineHeight: 1.6,
+            mb: 1,
+          }}
+        >
+          Discover amazing people looking for roommates just like you
+        </Typography>
+        <Typography
+          sx={{
+            color: 'var(--foreground-tertiary)',
+            fontSize: '1rem',
+            maxWidth: '500px',
+            mx: 'auto',
+            fontStyle: 'italic',
+          }}
+        >
+          Swipe through profiles, connect instantly, and find your ideal living companion
+        </Typography>
+      </Box>
 
       {profilesLoading && (
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
@@ -268,7 +356,7 @@ export default function RoommatesPage() {
         </Box>
       )}
 
-      <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+      <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
         {posts.length === 0 ? (
           <Box
             sx={{
@@ -285,148 +373,201 @@ export default function RoommatesPage() {
           </Box>
         ) : (
           <>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, mb: 4 }}>
+            {/* Square Grid Layout */}
+            <Box 
+              sx={{ 
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: 'repeat(1, 1fr)',
+                  sm: 'repeat(2, 1fr)',
+                  md: 'repeat(3, 1fr)',
+                  lg: 'repeat(4, 1fr)',
+                },
+                gap: 3,
+                mb: 4,
+              }}
+            >
               {paginatedPosts.map((post) => (
                 <Card
                   key={post.id}
-                  className="dark-card"
+                  className="dark-card scale-on-hover"
                   sx={{
                     background: 'var(--background-card)',
                     borderRadius: '16px',
                     border: '1px solid rgba(255, 255, 255, 0.1)',
                     overflow: 'hidden',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                    position: 'relative',
                     '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 'var(--shadow-blue-hover)',
+                      transform: 'translateY(-8px) scale(1.02)',
+                      boxShadow: '0 20px 40px rgba(0, 122, 255, 0.15)',
                       border: '1px solid var(--primary)',
                     },
                   }}
                 >
-                  <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, minHeight: 300 }}>
-                    {/* Image Section */}
-                    <Box sx={{ flex: { xs: 'none', md: '0 0 400px' } }}>
-                      <Carousel images={post.images} />
-                    </Box>
+                  {/* Square Image Section */}
+                  <Box sx={{ position: 'relative' }}>
+                    <SquareCarousel images={post.images} />
+                    
+                    {/* Favorite Button */}
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleFavorite(post.id)
+                      }}
+                      sx={{
+                        position: 'absolute',
+                        top: 12,
+                        right: 12,
+                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                        color: favorites.has(post.id) ? '#ff4757' : '#ffffff',
+                        width: 40,
+                        height: 40,
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          transform: 'scale(1.1)',
+                        },
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {favorites.has(post.id) ? <Favorite /> : <FavoriteBorder />}
+                    </IconButton>
+                  </Box>
 
-                    {/* Content Section */}
-                    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <CardHeader
-                        avatar={
-                          <Avatar
-                            src={post.profile?.profilePicture}
-                            sx={{ 
-                              bgcolor: 'var(--primary)',
-                              width: 50,
-                              height: 50,
-                            }}
-                          >
-                            {post.profile?.name?.[0] || '?'}
-                          </Avatar>
-                        }
-                        title={
-                          <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, fontSize: '1.1rem' }}>
-                            {post.profile?.name || 'Anonymous'}
-                          </Typography>
-                        }
-                        subheader={
-                          <Box sx={{ mt: 1 }}>
-                            {post.profile?.traits && post.profile.traits.length > 0 && (
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-                                {post.profile.traits.slice(0, 3).map((trait, idx) => (
-                                  <Box
-                                    key={idx}
-                                    sx={{
-                                      px: 2,
-                                      py: 0.5,
-                                      borderRadius: '12px',
-                                      background: 'var(--background-secondary)',
-                                      color: 'var(--primary)',
-                                      fontSize: '0.8rem',
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    {trait}
-                                  </Box>
-                                ))}
-                                {post.profile.traits.length > 3 && (
-                                  <Box
-                                    sx={{
-                                      px: 2,
-                                      py: 0.5,
-                                      borderRadius: '12px',
-                                      background: 'var(--background-secondary)',
-                                      color: 'var(--foreground-secondary)',
-                                      fontSize: '0.8rem',
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    +{post.profile.traits.length - 3} more
-                                  </Box>
-                                )}
-                              </Box>
-                            )}
-                          </Box>
-                        }
-                        sx={{ p: 3, pb: 2 }}
-                      />
-
-                      <CardContent sx={{ flexGrow: 1, pt: 0, p: 3 }}>
-                        <Typography
-                          variant="h6"
-                          sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2 }}
-                        >
-                          {post.title}
-                        </Typography>
-
-                        <Typography
-                          sx={{
-                            color: 'var(--foreground-secondary)',
-                            mb: 3,
-                            lineHeight: 1.6,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
+                  {/* Content Section */}
+                  <Box sx={{ p: 2.5 }}>
+                    {/* Profile Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Avatar
+                        src={post.profile?.profilePicture}
+                        sx={{ 
+                          bgcolor: 'var(--primary)',
+                          width: 40,
+                          height: 40,
+                        }}
+                      >
+                        {post.profile?.name?.[0] || '?'}
+                      </Avatar>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography 
+                          sx={{ 
+                            color: 'var(--foreground)', 
+                            fontWeight: 600, 
+                            fontSize: '1rem',
                             overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          {post.description}
+                          {post.profile?.name || 'Anonymous'}
                         </Typography>
-
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 'auto' }}>
-                          <Typography
-                            sx={{
-                              color: 'var(--foreground-secondary)',
-                              fontSize: '0.9rem',
-                            }}
-                          >
-                            Posted {post.createdAt.toDate().toLocaleDateString()}
-                          </Typography>
-
-                          <Button
-                            onClick={() => handleChat(post)}
-                            startIcon={<ChatIcon />}
-                            className="btn-primary"
-                            sx={{
-                              textTransform: 'none',
-                              borderRadius: '12px',
-                              px: 3,
-                              py: 1,
-                              '&.btn-primary': {
-                                background: 'var(--gradient-primary)',
-                                color: 'white',
-                                '&:hover': {
-                                  background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
-                                  transform: 'translateY(-1px)',
-                                }
-                              }
-                            }}
-                          >
-                            Start Chat
-                          </Button>
-                        </Box>
-                      </CardContent>
+                        <Typography 
+                          sx={{ 
+                            color: 'var(--foreground-secondary)', 
+                            fontSize: '0.8rem',
+                          }}
+                        >
+                          {post.createdAt.toDate().toLocaleDateString()}
+                        </Typography>
+                      </Box>
                     </Box>
+
+                    {/* Title */}
+                    <Typography
+                      sx={{
+                        color: 'var(--foreground)',
+                        fontWeight: 600,
+                        fontSize: '1.1rem',
+                        mb: 1.5,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {post.title}
+                    </Typography>
+
+                    {/* Description */}
+                    <Typography
+                      sx={{
+                        color: 'var(--foreground-secondary)',
+                        fontSize: '0.9rem',
+                        lineHeight: 1.4,
+                        mb: 2,
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        minHeight: '2.8rem', // Consistent height
+                      }}
+                    >
+                      {post.description}
+                    </Typography>
+
+                    {/* Traits */}
+                    {post.profile?.traits && post.profile.traits.length > 0 && (
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+                        {post.profile.traits.slice(0, 2).map((trait, idx) => (
+                          <Box
+                            key={idx}
+                            sx={{
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: '8px',
+                              background: 'var(--background-secondary)',
+                              color: 'var(--primary)',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {trait}
+                          </Box>
+                        ))}
+                        {post.profile.traits.length > 2 && (
+                          <Box
+                            sx={{
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: '8px',
+                              background: 'var(--background-secondary)',
+                              color: 'var(--foreground-secondary)',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                            }}
+                          >
+                            +{post.profile.traits.length - 2}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Action Button */}
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleChat(post)
+                      }}
+                      startIcon={<ChatIcon />}
+                      fullWidth
+                      className="btn-primary"
+                      sx={{
+                        textTransform: 'none',
+                        borderRadius: '12px',
+                        py: 1,
+                        fontWeight: 600,
+                        '&.btn-primary': {
+                          background: 'var(--gradient-primary)',
+                          color: 'white',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
+                            transform: 'translateY(-1px)',
+                          }
+                        }
+                      }}
+                    >
+                      Start Chat
+                    </Button>
                   </Box>
                 </Card>
               ))}

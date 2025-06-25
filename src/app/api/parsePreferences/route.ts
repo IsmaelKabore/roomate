@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = new OpenAI({ apiKey: "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" });
 
 interface ParsedPrefs {
   bedrooms: number | null;

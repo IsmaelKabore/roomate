@@ -18,14 +18,13 @@ import {
   InputBase,
   CircularProgress,
   Chip,
-  alpha,
-  useTheme,
 } from '@mui/material'
 
 import SearchIcon from '@mui/icons-material/Search'
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos'
 import AttachFileIcon from '@mui/icons-material/AttachFile'
 import SendIcon from '@mui/icons-material/Send'
+import ChatIcon from '@mui/icons-material/Chat'
 
 // Import auth from your firebaseConfig
 import { auth } from '@/lib/firebaseConfig'
@@ -72,12 +71,11 @@ interface TwoPanelChatProps {
 
 export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   const router = useRouter()
-  const theme = useTheme()
 
   // Make sure auth is defined (user must be signed in)
   const currentUser = auth.currentUser
 
-  // ─── Sidebar “inbox” state ──────────────────────────────────────
+  // ─── Sidebar "inbox" state ──────────────────────────────────────
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([])
   const [inboxLoading, setInboxLoading] = useState(true)
 
@@ -137,7 +135,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // 1) Load current user’s inbox (list of rooms) and set initial room
+  // 1) Load current user's inbox (list of rooms) and set initial room
   // ══════════════════════════════════════════════════════════════════
   useEffect(() => {
     if (!currentUser) {
@@ -199,172 +197,200 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   // 2) When activeRoomId changes, subscribe to messages & typing flags
   // ══════════════════════════════════════════════════════════════════
   useEffect(() => {
-    if (!currentUser || !activeRoomId) {
-      setMessages([])
-      setMsgLoading(false)
-      return
-    }
+    if (!activeRoomId || !currentUser) return
 
     async function initRoomAndSubscribe() {
-      // 2a) Ensure room exists (create/join)
-      await createRoom(
-        activeRoomId!,
-        [
-          currentUser?.uid || '',
-          ...(activeRoomId && currentUser ? activeRoomId.split('_').filter((id) => id !== currentUser.uid) : []),
-        ]
-      )
+      try {
+        setMsgLoading(true)
+        setMessages([])
 
-      // 2b) Subscribe to real-time messages
-      setMsgLoading(true)
-      if (!activeRoomId) return;
-      const unsubMessages = onMessagesSnapshot(activeRoomId, (docs) => {
-        setMessages(docs)
-        setMsgLoading(false)
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+        // Subscribe to real-time messages
+        const unsubMessages = onMessagesSnapshot(activeRoomId!, (msgs) => {
+          console.log('→ [TwoPanelChat] received messages:', msgs.length)
+          setMessages(msgs)
+          setMsgLoading(false)
 
-        if (docs.length > 0) {
-          const lastMsg = docs[docs.length - 1]
-          console.log(
-            '→ [TwoPanelChat] new message arrived:',
-            lastMsg.text,
-            'from',
-            lastMsg.senderId
-          )
+          // Auto-scroll to bottom when new messages arrive
+          setTimeout(() => {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+          }, 100)
 
-          // Fetch suggestions whenever a new message arrives:
-          // (### For testing, we’ll fetch even if I sent it)
-          // if (lastMsg.senderId !== currentUser.uid) {
-            fetchSmartReplies(lastMsg.text)
-          // }
-        }
-
-        // 2c) Update read timestamp
-        if (currentUser) {
-          if (activeRoomId) {
-            updateReadTimestamp(activeRoomId, currentUser.uid).catch(console.error)
+          // If there's a new incoming message (not from current user), fetch smart replies
+          if (msgs.length > 0 && currentUser) {
+            const latestMsg = msgs[msgs.length - 1]
+            if (latestMsg.senderId !== currentUser.uid && latestMsg.text) {
+              fetchSmartReplies(latestMsg.text)
+            }
           }
+        })
+
+        // Mark messages as read
+        if (currentUser) {
+          updateReadTimestamp(activeRoomId!, currentUser.uid)
         }
-      })
 
-      // 2d) Subscribe to typing flags (not used for suggestions directly)
-      const unsubTyping = onTypingSnapshot(activeRoomId!, (flags) => {
-        // e.g. setTypingFlags(flags)
-      })
-
-      return () => {
-        unsubMessages()
-        unsubTyping()
+        return () => {
+          unsubMessages()
+        }
+      } catch (err) {
+        console.error('Error initializing room:', err)
+        setMsgLoading(false)
       }
     }
 
-    const cleanupPromise = initRoomAndSubscribe()
-    return () => {
-      cleanupPromise.then((fn) => {
-        if (typeof fn === 'function') fn()
-      })
-    }
-  }, [currentUser, activeRoomId])
+    initRoomAndSubscribe()
+  }, [activeRoomId, currentUser])
 
   // ══════════════════════════════════════════════════════════════════
-  // 3) Send a new message
+  // 3) Handle sending a message
   // ══════════════════════════════════════════════════════════════════
   const handleSend = async () => {
-    if (!currentUser || !activeRoomId || newMsgText.trim() === '') return
-    const trimmed = newMsgText.trim()
-    setNewMsgText('')
-    await sendMessage(activeRoomId, currentUser.uid, trimmed)
-    await setTyping(activeRoomId, currentUser.uid, false)
-    // Clear suggestions when sending
-    setSmartSuggestions([])
+    if (!newMsgText.trim() || !activeRoomId || !currentUser) return
+    try {
+      await sendMessage(activeRoomId, currentUser.uid, newMsgText.trim())
+      setNewMsgText('')
+      setSmartSuggestions([]) // Clear suggestions after sending
+    } catch (err) {
+      console.error('Error sending message:', err)
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // 4) Typing indicator
+  // 4) Handle typing indicator
   // ══════════════════════════════════════════════════════════════════
   const handleTypingChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMsgText(e.target.value)
-    if (currentUser && activeRoomId) {
+    if (!activeRoomId || !currentUser) return
+    try {
       await setTyping(activeRoomId, currentUser.uid, e.target.value.length > 0)
+    } catch (err) {
+      console.error('Error setting typing status:', err)
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // 5) Render the two-panel chat UI
-  // ══════════════════════════════════════════════════════════════════
+  // Show loading if we don't have current user
   if (!currentUser) {
     return (
       <Box
         sx={{
-          flex: 1,
           minHeight: '100vh',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
+          background: 'var(--gradient-background)',
         }}
       >
-        <CircularProgress />
+        <CircularProgress sx={{ color: 'var(--primary)' }} />
       </Box>
     )
   }
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh', backgroundColor: '#F3F4F6' }}>
+    <Box 
+      sx={{ 
+        display: 'flex', 
+        height: '100vh', 
+        background: 'var(--gradient-background)',
+        color: 'var(--foreground)',
+      }}
+    >
       {/** ─────────────────────────────────────────────────────────────────
                  LEFT PANEL: Inbox Sidebar
       ───────────────────────────────────────────────────────────────── **/}
       <Paper
-        elevation={3}
+        elevation={0}
+        className="dark-card"
         sx={{
-          width: 320,
-          backgroundColor: theme.palette.primary.dark,
-          color: '#FFFFFF',
+          width: 380,
+          background: 'var(--background-card)',
+          color: 'var(--foreground)',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: 0,
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
           overflow: 'hidden',
         }}
       >
+        {/* Header with title */}
+        <Box
+          sx={{
+            px: 3,
+            py: 2.5,
+            background: 'var(--gradient-primary)',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <ChatIcon sx={{ fontSize: 24 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>
+            Messages
+          </Typography>
+        </Box>
+
         {/* Search bar */}
         <Box
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            px: 2,
-            py: 1,
-            backgroundColor: alpha(theme.palette.primary.main, 0.9),
+            p: 2,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           }}
         >
-          <IconButton sx={{ color: '#FFFFFF' }}>
-            <SearchIcon />
-          </IconButton>
-          <InputBase
-            placeholder="Search..."
+          <Box
             sx={{
-              ml: 1,
-              flex: 1,
-              borderRadius: 1,
-              px: 1.5,
-              py: 0.5,
-              backgroundColor: alpha('#fff', 0.15),
-              color: '#FFFFFF',
-              '& input::placeholder': {
-                color: alpha('#fff', 0.7),
-              },
+              display: 'flex',
+              alignItems: 'center',
+              background: 'var(--background-secondary)',
+              borderRadius: '12px',
+              px: 2,
+              py: 1,
+              border: '1px solid rgba(255, 255, 255, 0.1)',
             }}
-            inputProps={{ 'aria-label': 'search chats' }}
-          />
+          >
+            <SearchIcon sx={{ color: 'var(--foreground-secondary)', fontSize: 20, mr: 1 }} />
+            <InputBase
+              placeholder="Search conversations..."
+              sx={{
+                flex: 1,
+                color: 'var(--foreground)',
+                fontSize: '0.95rem',
+                '& input::placeholder': {
+                  color: 'var(--foreground-secondary)',
+                  opacity: 1,
+                },
+              }}
+              inputProps={{ 'aria-label': 'search chats' }}
+            />
+          </Box>
         </Box>
-
-        <Divider sx={{ borderColor: alpha('#fff', 0.2) }} />
 
         {inboxLoading ? (
           <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <CircularProgress color="inherit" size={28} />
+            <CircularProgress sx={{ color: 'var(--primary)' }} size={28} />
           </Box>
         ) : inboxItems.length === 0 ? (
-          <Box sx={{ p: 2, textAlign: 'center' }}>
-            <Typography color={alpha('#fff', 0.8)}>No conversations yet</Typography>
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', px: 3 }}>
+            <Box
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: '50%',
+                background: 'var(--background-secondary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 3,
+              }}
+            >
+              <ChatIcon sx={{ fontSize: 40, color: 'var(--foreground-secondary)' }} />
+            </Box>
+            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1, textAlign: 'center' }}>
+              No conversations yet
+            </Typography>
+            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem', textAlign: 'center', lineHeight: 1.5 }}>
+              Start chatting with roommates to see your conversations here
+            </Typography>
           </Box>
         ) : (
           <List disablePadding sx={{ overflowY: 'auto', flex: 1 }}>
@@ -378,12 +404,13 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                       router.push(`/messages/${it.id}`, { scroll: false })
                     }}
                     sx={{
-                      py: 1.5,
-                      px: 2,
-                      backgroundColor: isActive ? alpha('#fff', 0.15) : 'transparent',
+                      py: 2,
+                      px: 3,
+                      background: isActive ? 'var(--primary)' : 'transparent',
                       '&:hover': {
-                        backgroundColor: alpha('#fff', 0.10),
+                        background: isActive ? 'var(--primary-hover)' : 'rgba(255, 255, 255, 0.05)',
                       },
+                      transition: 'all 0.2s ease',
                     }}
                   >
                     <ListItemAvatar>
@@ -393,25 +420,27 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                         invisible={it.unreadCount === 0}
                         sx={{
                           '& .MuiBadge-badge': {
-                            backgroundColor: '#FF5252',
+                            backgroundColor: '#ff4757',
                             color: '#fff',
-                            fontSize: 10,
-                            minWidth: 16,
-                            height: 16,
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            minWidth: 18,
+                            height: 18,
                           },
                         }}
                       >
                         <Avatar
                           src={it.avatarUrl}
                           sx={{
-                            width: 40,
-                            height: 40,
-                            bgcolor: alpha('#ffffff', 0.2),
-                            color: '#ffffff',
+                            width: 48,
+                            height: 48,
+                            bgcolor: 'var(--gradient-primary)',
+                            color: 'white',
                             fontWeight: 600,
+                            fontSize: '1.1rem',
                           }}
                         >
-                          {!it.avatarUrl && it.name.charAt(0)}
+                          {!it.avatarUrl && it.name.charAt(0).toUpperCase()}
                         </Avatar>
                       </Badge>
                     </ListItemAvatar>
@@ -420,8 +449,9 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                         <Typography
                           sx={{
                             fontWeight: isActive ? 600 : 500,
-                            fontSize: 14,
-                            color: '#FFFFFF',
+                            fontSize: '1rem',
+                            color: isActive ? 'white' : 'var(--foreground)',
+                            mb: 0.5,
                           }}
                           noWrap
                         >
@@ -431,32 +461,38 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                       secondary={
                         <Typography
                           sx={{
-                            fontSize: 12,
-                            color: alpha('#ffffff', 0.75),
+                            fontSize: '0.85rem',
+                            color: isActive ? 'rgba(255, 255, 255, 0.8)' : 'var(--foreground-secondary)',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
-                            maxWidth: 180,
+                            maxWidth: 200,
                           }}
                         >
                           {it.latestText || 'No messages yet'}
                         </Typography>
                       }
                     />
-                    <Typography
-                      variant="caption"
-                      sx={{ color: alpha('#ffffff', 0.6), fontSize: 10 }}
-                    >
-                      {it.latestTimestamp > 0
-                        ? new Date(it.latestTimestamp).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : ''}
-                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ 
+                          color: isActive ? 'rgba(255, 255, 255, 0.7)' : 'var(--foreground-secondary)', 
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {it.latestTimestamp > 0
+                          ? new Date(it.latestTimestamp).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : ''}
+                      </Typography>
+                    </Box>
                   </ListItemButton>
                   {idx < inboxItems.length - 1 && (
-                    <Divider sx={{ backgroundColor: alpha('#fff', 0.2) }} />
+                    <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', mx: 3 }} />
                   )}
                 </Box>
               )
@@ -473,8 +509,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          borderLeft: `1px solid ${alpha('#000', 0.05)}`,
-          backgroundColor: '#F9FAFB',
+          background: 'var(--background-secondary)',
         }}
       >
         {!activeRoomId ? (
@@ -482,25 +517,49 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
             sx={{
               flex: 1,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              color: theme.palette.text.secondary,
+              color: 'var(--foreground-secondary)',
+              px: 4,
             }}
           >
-            <Typography variant="h6">Select a conversation</Typography>
+            <Box
+              sx={{
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                background: 'var(--background-card)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mb: 4,
+              }}
+            >
+              <ChatIcon sx={{ fontSize: 60, color: 'var(--primary)' }} />
+            </Box>
+            <Typography variant="h5" sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2 }}>
+              Select a conversation
+            </Typography>
+            <Typography sx={{ color: 'var(--foreground-secondary)', textAlign: 'center', lineHeight: 1.6 }}>
+              Choose a conversation from the sidebar to start chatting with your roommates
+            </Typography>
           </Box>
         ) : (
           <>
             {/** ─── Header ─── **/}
             <Paper
-              elevation={2}
+              elevation={0}
+              className="dark-card"
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                height: 64,
-                px: 2,
-                background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
-                color: '#fff',
+                height: 80,
+                px: 3,
+                background: 'var(--background-card)',
+                color: 'var(--foreground)',
+                borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: 0,
               }}
             >
               <IconButton
@@ -508,7 +567,13 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                   setActiveRoomId(null)
                   router.push('/messages')
                 }}
-                sx={{ color: '#FFFFFF' }}
+                sx={{ 
+                  color: 'var(--primary)',
+                  mr: 2,
+                  '&:hover': {
+                    background: 'rgba(0, 122, 255, 0.1)',
+                  }
+                }}
               >
                 <ArrowBackIosIcon fontSize="small" />
               </IconButton>
@@ -517,24 +582,33 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                 const item = inboxItems.find((x) => x.id === activeRoomId)
                 if (!item) return null
                 return (
-                  <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', flex: 1 }}>
                     <Avatar
                       src={item.avatarUrl}
                       sx={{
-                        width: 40,
-                        height: 40,
-                        bgcolor: alpha('#ffffff', 0.2),
-                        color: '#ffffff',
+                        width: 48,
+                        height: 48,
+                        bgcolor: 'var(--gradient-primary)',
+                        color: 'white',
+                        fontWeight: 600,
+                        mr: 3,
                       }}
                     >
-                      {!item.avatarUrl && item.name.charAt(0)}
+                      {!item.avatarUrl && item.name.charAt(0).toUpperCase()}
                     </Avatar>
-                    <Typography
-                      variant="h6"
-                      sx={{ fontWeight: 600, ml: 2, color: '#fff', fontSize: 16 }}
-                    >
-                      {item.name}
-                    </Typography>
+                    <Box>
+                      <Typography
+                        variant="h6"
+                        sx={{ fontWeight: 600, color: 'var(--foreground)', fontSize: '1.1rem', mb: 0.5 }}
+                      >
+                        {item.name}
+                      </Typography>
+                      <Typography
+                        sx={{ color: 'var(--foreground-secondary)', fontSize: '0.85rem' }}
+                      >
+                        Active now
+                      </Typography>
+                    </Box>
                   </Box>
                 )
               })()}
@@ -544,32 +618,57 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
             <Box
               sx={{
                 flex: 1,
-                p: 2,
+                p: 3,
                 overflowY: 'auto',
                 position: 'relative',
-                backgroundColor: '#F3F4F6',
+                background: 'var(--background-secondary)',
                 '&::-webkit-scrollbar': {
                   width: 6,
                 },
                 '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: alpha(theme.palette.primary.main, 0.4),
+                  backgroundColor: 'rgba(0, 122, 255, 0.4)',
                   borderRadius: 3,
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: 'transparent',
                 },
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 1,
+                gap: 2,
               }}
             >
               {msgLoading ? (
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
-                  <CircularProgress size={28} />
+                  <CircularProgress sx={{ color: 'var(--primary)' }} size={28} />
                 </Box>
               ) : messages.length === 0 ? (
-                <Typography
-                  sx={{ color: theme.palette.text.disabled, textAlign: 'center', mt: 2 }}
-                >
-                  No messages yet.
-                </Typography>
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: '50%',
+                      background: 'var(--background-card)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mb: 3,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                    }}
+                  >
+                    <ChatIcon sx={{ fontSize: 40, color: 'var(--primary)' }} />
+                  </Box>
+                  <Typography
+                    sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1, textAlign: 'center' }}
+                  >
+                    Start the conversation
+                  </Typography>
+                  <Typography
+                    sx={{ color: 'var(--foreground-secondary)', textAlign: 'center', fontSize: '0.9rem' }}
+                  >
+                    Send a message to get the conversation started
+                  </Typography>
+                </Box>
               ) : (
                 messages.map((m, idx) => {
                   const isMe = m.senderId === currentUser.uid
@@ -578,27 +677,32 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                       key={idx}
                       sx={{
                         alignSelf: isMe ? 'flex-end' : 'flex-start',
-                        maxWidth: '70%',
-                        mb: 0.5,
+                        maxWidth: '75%',
+                        mb: 1,
                       }}
                     >
                       <Paper
                         elevation={0}
                         sx={{
-                          p: 1.5,
-                          backgroundColor: isMe
-                            ? theme.palette.primary.main
-                            : '#E5E7EB',
-                          color: isMe ? '#FFFFFF' : '#000000',
-                          borderRadius: 2,
-                          boxShadow: isMe ? '0 2px 6px rgba(0,0,0,0.2)' : 'none',
-                          borderTopLeftRadius: isMe ? 16 : 2,
-                          borderTopRightRadius: isMe ? 2 : 16,
+                          p: 2,
+                          background: isMe
+                            ? 'var(--gradient-primary)'
+                            : 'var(--background-card)',
+                          color: isMe ? 'white' : 'var(--foreground)',
+                          borderRadius: '18px',
+                          borderTopLeftRadius: isMe ? '18px' : '6px',
+                          borderTopRightRadius: isMe ? '6px' : '18px',
+                          border: isMe ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                          boxShadow: isMe ? '0 4px 12px rgba(0, 122, 255, 0.3)' : 'none',
                         }}
                       >
                         <Typography
-                          variant="body2"
-                          sx={{ lineHeight: 1.4, wordBreak: 'break-word' }}
+                          variant="body1"
+                          sx={{ 
+                            lineHeight: 1.5, 
+                            wordBreak: 'break-word',
+                            fontSize: '0.95rem',
+                          }}
                         >
                           {m.text}
                         </Typography>
@@ -606,10 +710,12 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                       <Typography
                         variant="caption"
                         sx={{
-                          color: theme.palette.text.disabled,
-                          fontSize: 10,
-                          mt: 0.3,
+                          color: 'var(--foreground-secondary)',
+                          fontSize: '0.75rem',
+                          mt: 0.5,
+                          display: 'block',
                           textAlign: isMe ? 'right' : 'left',
+                          px: 1,
                         }}
                       >
                         {new Date(m.timestamp).toLocaleTimeString([], {
@@ -631,9 +737,8 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                   display: 'flex',
                   flexWrap: 'wrap',
                   gap: 1,
-                  mb: 1,
-                  px: 2,
-                  mt: 1,
+                  mb: 2,
+                  px: 3,
                 }}
               >
                 {smartSuggestions.map((s, i) => (
@@ -642,37 +747,54 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                     label={s}
                     size="small"
                     clickable
-                    color="primary"
                     onClick={() => {
                       console.log('→ [TwoPanelChat] user clicked suggestion:', s)
                       setNewMsgText(s)
                     }}
+                    sx={{
+                      background: 'var(--background-card)',
+                      color: 'var(--primary)',
+                      border: '1px solid rgba(0, 122, 255, 0.3)',
+                      '&:hover': {
+                        background: 'var(--primary)',
+                        color: 'white',
+                      },
+                      transition: 'all 0.2s ease',
+                    }}
                   />
                 ))}
-                {fetchingSuggestions && <CircularProgress size={20} />}
+                {fetchingSuggestions && <CircularProgress sx={{ color: 'var(--primary)' }} size={20} />}
               </Box>
             )}
 
             {/** ─── Input Bar ─── **/}
             <Paper
-              elevation={4}
+              elevation={0}
+              className="dark-card"
               sx={{
-                m: 2,
+                m: 3,
                 mt: 0,
-                p: 1,
+                p: 2,
                 display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                borderRadius: 2,
-                backgroundColor: '#FFFFFF',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                alignItems: 'flex-end',
+                gap: 2,
+                borderRadius: '20px',
+                background: 'var(--background-card)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
               }}
             >
-              <IconButton sx={{ color: theme.palette.primary.main }}>
+              <IconButton 
+                sx={{ 
+                  color: 'var(--primary)',
+                  '&:hover': {
+                    background: 'rgba(0, 122, 255, 0.1)',
+                  }
+                }}
+              >
                 <AttachFileIcon />
               </IconButton>
               <InputBase
-                placeholder="Type a message…"
+                placeholder="Type your message..."
                 value={newMsgText}
                 onChange={handleTypingChange}
                 onKeyDown={(e) => {
@@ -683,16 +805,36 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                 }}
                 sx={{
                   flex: 1,
-                  px: 1.5,
-                  py: 0.5,
-                  backgroundColor: alpha(theme.palette.primary.main, 0.03),
-                  borderRadius: 1.5,
-                  fontSize: 14,
+                  px: 2,
+                  py: 1,
+                  background: 'var(--background-secondary)',
+                  borderRadius: '16px',
+                  fontSize: '0.95rem',
+                  color: 'var(--foreground)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  '& input::placeholder': {
+                    color: 'var(--foreground-secondary)',
+                    opacity: 1,
+                  },
                 }}
                 multiline
                 maxRows={4}
               />
-              <IconButton onClick={handleSend} sx={{ color: theme.palette.primary.main }}>
+              <IconButton 
+                onClick={handleSend} 
+                disabled={!newMsgText.trim()}
+                sx={{ 
+                  background: newMsgText.trim() ? 'var(--gradient-primary)' : 'var(--background-secondary)',
+                  color: newMsgText.trim() ? 'white' : 'var(--foreground-secondary)',
+                  '&:hover': {
+                    background: newMsgText.trim() ? 'var(--primary-hover)' : 'var(--background-secondary)',
+                  },
+                  '&:disabled': {
+                    color: 'var(--foreground-secondary)',
+                  },
+                  transition: 'all 0.2s ease',
+                }}
+              >
                 <SendIcon />
               </IconButton>
             </Paper>

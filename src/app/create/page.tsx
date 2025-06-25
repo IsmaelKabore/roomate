@@ -13,8 +13,7 @@ import {
   Paper,
   CircularProgress,
   IconButton,
-  useTheme,
-  alpha,
+  Chip,
 } from '@mui/material'
 import { useJsApiLoader, Autocomplete } from '@react-google-maps/api'
 import { auth } from '@/lib/firebaseConfig'
@@ -25,6 +24,9 @@ import PhotoCameraIcon from '@mui/icons-material/PhotoCamera'
 import LightbulbIcon from '@mui/icons-material/Lightbulb'
 import SpellcheckIcon from '@mui/icons-material/Spellcheck'
 import DeleteIcon from '@mui/icons-material/Delete'
+import AddIcon from '@mui/icons-material/Add'
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
+import LocationOnIcon from '@mui/icons-material/LocationOn'
 
 type FormValues = {
   type: 'room' | 'roommate'
@@ -51,7 +53,6 @@ const MAP_LIBRARIES: ('places')[] = ['places']
 
 export default function CreatePostPage() {
   const router = useRouter()
-  const theme = useTheme()
 
   // react-hook-form setup
   const {
@@ -121,7 +122,7 @@ export default function CreatePostPage() {
     setImagePreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // Handle “Proofread Description” (optional server route)
+  // Handle "Proofread Description" (optional server route)
   async function onProofreadDescription(
     event: React.MouseEvent<HTMLButtonElement, MouseEvent>
   ): Promise<void> {
@@ -232,15 +233,33 @@ export default function CreatePostPage() {
 
   if (loadError) {
     return (
-      <Typography color="error" sx={{ mt: 4, textAlign: 'center' }}>
-        Error loading Maps SDK
-      </Typography>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'var(--gradient-background)',
+        }}
+      >
+        <Typography sx={{ color: '#ef4444', fontSize: '1.1rem', textAlign: 'center' }}>
+          Error loading Maps SDK
+        </Typography>
+      </Box>
     )
   }
   if (!isLoaded) {
     return (
-      <Box sx={{ textAlign: 'center', mt: 4 }}>
-        <CircularProgress />
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'var(--gradient-background)',
+        }}
+      >
+        <CircularProgress sx={{ color: 'var(--primary)' }} />
       </Box>
     )
   }
@@ -249,137 +268,231 @@ export default function CreatePostPage() {
     <Box
       sx={{
         minHeight: '100vh',
-        background: `radial-gradient(circle at top left, ${theme.palette.primary.light}33, ${theme.palette.primary.dark}11)`,
-        py: { xs: 6, md: 10 },
-        px: { xs: 2, md: 8 },
+        background: 'var(--gradient-background)',
+        color: 'var(--foreground)',
+        py: { xs: 4, md: 6 },
+        px: { xs: 2, md: 4 },
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'flex-start',
       }}
     >
       <Paper
-        elevation={12}
+        elevation={0}
+        className="dark-card"
         sx={{
           position: 'relative',
           p: { xs: 3, md: 5 },
           width: '100%',
-          maxWidth: 600,
-          borderRadius: 4,
-          background: alpha('#ffffff', 0.15),
-          backdropFilter: 'blur(12px)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          maxWidth: 700,
+          borderRadius: '24px',
+          background: 'var(--background-card)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          overflow: 'hidden',
         }}
       >
-        <Typography
-          variant="h4"
-          sx={{
-            mb: 4,
-            color: theme.palette.primary.dark,
-            fontWeight: 700,
-            textAlign: 'center',
-            letterSpacing: 1,
-          }}
-        >
-          Create a {selectedType === 'room' ? 'Room' : 'Roommate'} Post
-        </Typography>
-
-        <Box
-          sx={{
-            position: 'absolute',
-            top: -36,
-            right: -36,
-            bgcolor: alpha(theme.palette.primary.main, 0.3),
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            transform: 'rotate(45deg)',
-            zIndex: -1,
-          }}
-        />
-
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          {/* Post Type */}
-          <TextField
-            select
-            label="Post Type"
-            fullWidth
-            {...register('type')}
-            value={selectedType}
+        {/* Header Section */}
+        <Box sx={{ textAlign: 'center', mb: 5 }}>
+          <Box
             sx={{
-              mb: 4,
-              '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
-              },
-              '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline':
-                {
-                  borderColor: theme.palette.primary.dark,
-                },
-              '& .MuiInputBase-input': { color: theme.palette.primary.dark },
+              width: 80,
+              height: 80,
+              borderRadius: '50%',
+              background: 'var(--gradient-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mx: 'auto',
+              mb: 3,
             }}
           >
-            <MenuItem value="room">
-              <HomeIcon sx={{ mr: 1, color: theme.palette.primary.main }} /> Room
-            </MenuItem>
-            <MenuItem value="roommate">
-              <PersonIcon sx={{ mr: 1, color: theme.palette.primary.main }} /> Roommate
-            </MenuItem>
-          </TextField>
+            {selectedType === 'room' ? (
+              <HomeIcon sx={{ fontSize: 40, color: 'white' }} />
+            ) : (
+              <PersonIcon sx={{ fontSize: 40, color: 'white' }} />
+            )}
+          </Box>
+          <Typography
+            variant="h4"
+            sx={{
+              mb: 2,
+              background: 'var(--gradient-primary)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: 700,
+              fontSize: { xs: '2rem', md: '2.5rem' },
+            }}
+          >
+            Create Your {selectedType === 'room' ? 'Room' : 'Roommate'} Listing
+          </Typography>
+          <Typography
+            sx={{
+              color: 'var(--foreground-secondary)',
+              fontSize: '1.1rem',
+              maxWidth: '500px',
+              mx: 'auto',
+              lineHeight: 1.6,
+            }}
+          >
+            {selectedType === 'room' 
+              ? 'Share your space with the perfect roommate' 
+              : 'Find your ideal living companion'}
+          </Typography>
+        </Box>
+
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          {/* Post Type Selection */}
+          <Box sx={{ mb: 4 }}>
+            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+              What are you looking for?
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                type="button"
+                onClick={() => reset({ ...watch(), type: 'room' })}
+                variant={selectedType === 'room' ? 'contained' : 'outlined'}
+                startIcon={<HomeIcon />}
+                sx={{
+                  flex: 1,
+                  py: 1.5,
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  ...(selectedType === 'room' ? {
+                    background: 'var(--gradient-primary)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'var(--primary-hover)',
+                    }
+                  } : {
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: 'var(--foreground-secondary)',
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--primary)',
+                    }
+                  })
+                }}
+              >
+                List a Room
+              </Button>
+              <Button
+                type="button"
+                onClick={() => reset({ ...watch(), type: 'roommate' })}
+                variant={selectedType === 'roommate' ? 'contained' : 'outlined'}
+                startIcon={<PersonIcon />}
+                sx={{
+                  flex: 1,
+                  py: 1.5,
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  ...(selectedType === 'roommate' ? {
+                    background: 'var(--gradient-primary)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'var(--primary-hover)',
+                    }
+                  } : {
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: 'var(--foreground-secondary)',
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid var(--primary)',
+                    }
+                  })
+                }}
+              >
+                Find a Roommate
+              </Button>
+            </Box>
+          </Box>
 
           {/* Title (only if room) */}
           {selectedType === 'room' && (
-            <TextField
-              label="Title"
-              fullWidth
-              {...register('title', { required: 'Required' })}
-              error={!!errors.title}
-              helperText={errors.title?.message}
-              sx={{
-                mb: 4,
-                '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme.palette.primary.main,
-                },
-                '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline':
-                  {
-                    borderColor: theme.palette.primary.dark,
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+                Room Title
+              </Typography>
+              <TextField
+                placeholder="e.g., Spacious bedroom in downtown apartment"
+                fullWidth
+                {...register('title', { required: 'Title is required' })}
+                error={!!errors.title}
+                helperText={errors.title?.message}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    background: 'var(--background-secondary)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: 'var(--foreground)',
+                    '&:hover': {
+                      border: '1px solid var(--primary)',
+                    },
+                    '&.Mui-focused': {
+                      border: '1px solid var(--primary)',
+                    },
                   },
-                '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-              }}
-            />
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none',
+                  },
+                  '& input::placeholder': {
+                    color: 'var(--foreground-secondary)',
+                    opacity: 1,
+                  },
+                }}
+              />
+            </Box>
           )}
 
           {/* Description */}
-          <TextField
-            label={
-              selectedType === 'room'
-                ? 'Description (e.g. 2BR furnished apartment…)'
-                : 'Describe the roommate you’re looking for'
-            }
-            fullWidth
-            multiline
-            rows={4}
-            {...register('description', { required: 'Required' })}
-            error={!!errors.description}
-            helperText={errors.description?.message}
-            sx={{
-              mb: 2,
-              '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
-              },
-              '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline':
-                {
-                  borderColor: theme.palette.primary.dark,
+          <Box sx={{ mb: 3 }}>
+            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+              Description
+            </Typography>
+            <TextField
+              placeholder={
+                selectedType === 'room'
+                  ? 'Describe your room, amenities, and what you\'re looking for in a roommate...'
+                  : 'Describe yourself and what you\'re looking for in a roommate and living situation...'
+              }
+              fullWidth
+              multiline
+              rows={4}
+              {...register('description', { required: 'Description is required' })}
+              error={!!errors.description}
+              helperText={errors.description?.message}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'var(--background-secondary)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: 'var(--foreground)',
+                  '&:hover': {
+                    border: '1px solid var(--primary)',
+                  },
+                  '&.Mui-focused': {
+                    border: '1px solid var(--primary)',
+                  },
                 },
-              '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-            }}
-          />
+                '& .MuiOutlinedInput-notchedOutline': {
+                  border: 'none',
+                },
+                '& textarea::placeholder': {
+                  color: 'var(--foreground-secondary)',
+                  opacity: 1,
+                },
+              }}
+            />
+          </Box>
 
-          {/* AI Buttons (optional) */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+          {/* AI Enhancement Buttons */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 4, flexWrap: 'wrap' }}>
             {selectedType === 'room' && (
               <Button
+                type="button"
                 variant="outlined"
                 onClick={onGenerateTitle}
                 disabled={generatingTitle || currentDescription.trim().length === 0}
@@ -387,24 +500,29 @@ export default function CreatePostPage() {
                   generatingTitle ? <CircularProgress size={16} color="inherit" /> : <LightbulbIcon />
                 }
                 sx={{
-                  flex: 1,
-                  borderColor: theme.palette.primary.main,
-                  color: theme.palette.primary.main,
+                  flex: { xs: '1 1 100%', sm: 1 },
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: 'var(--primary)',
                   textTransform: 'none',
-                  px: 2,
                   py: 1,
-                  borderRadius: 2,
+                  borderRadius: '12px',
+                  fontWeight: 500,
                   '&:hover': {
-                    backgroundColor: alpha(theme.palette.primary.light, 0.2),
-                    borderColor: theme.palette.primary.dark,
+                    background: 'rgba(0, 122, 255, 0.1)',
+                    border: '1px solid var(--primary)',
                   },
+                  '&:disabled': {
+                    color: 'var(--foreground-secondary)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }
                 }}
               >
-                Generate Catchy Title
+                Generate Title
               </Button>
             )}
 
             <Button
+              type="button"
               variant="outlined"
               onClick={onProofreadDescription}
               disabled={proofreading || currentDescription.trim().length === 0}
@@ -412,177 +530,263 @@ export default function CreatePostPage() {
                 proofreading ? <CircularProgress size={16} color="inherit" /> : <SpellcheckIcon />
               }
               sx={{
-                flex: 1,
-                borderColor: theme.palette.primary.main,
-                color: theme.palette.primary.main,
+                flex: { xs: '1 1 100%', sm: 1 },
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: 'var(--primary)',
                 textTransform: 'none',
-                px: 2,
                 py: 1,
-                borderRadius: 2,
+                borderRadius: '12px',
+                fontWeight: 500,
                 '&:hover': {
-                  backgroundColor: alpha(theme.palette.primary.light, 0.2),
-                  borderColor: theme.palette.primary.dark,
+                  background: 'rgba(0, 122, 255, 0.1)',
+                  border: '1px solid var(--primary)',
                 },
+                '&:disabled': {
+                  color: 'var(--foreground-secondary)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                }
               }}
             >
               Proofread Description
             </Button>
           </Box>
 
-          {/* Keywords (comma-separated) */}
-          <TextField
-            label="Keywords (comma-separated)"
-            fullWidth
-            {...register('keywordsInput', { required: 'Enter at least one keyword' })}
-            error={!!errors.keywordsInput}
-            helperText={errors.keywordsInput?.message || 'e.g. furnished, 2BR, near campus'}
-            sx={{
-              mb: 4,
-              '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.main,
-              },
-              '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: theme.palette.primary.dark,
-              },
-              '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-            }}
-          />
+          {/* Keywords */}
+          <Box sx={{ mb: 4 }}>
+            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+              Keywords
+            </Typography>
+            <TextField
+              placeholder="e.g., furnished, quiet, near campus, pet-friendly"
+              fullWidth
+              {...register('keywordsInput', { required: 'Enter at least one keyword' })}
+              error={!!errors.keywordsInput}
+              helperText={errors.keywordsInput?.message || 'Separate keywords with commas to help others find your listing'}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  background: 'var(--background-secondary)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  color: 'var(--foreground)',
+                  '&:hover': {
+                    border: '1px solid var(--primary)',
+                  },
+                  '&.Mui-focused': {
+                    border: '1px solid var(--primary)',
+                  },
+                },
+                '& .MuiOutlinedInput-notchedOutline': {
+                  border: 'none',
+                },
+                '& input::placeholder': {
+                  color: 'var(--foreground-secondary)',
+                  opacity: 1,
+                },
+              }}
+            />
+          </Box>
 
           {/* Price (only if room) */}
           {selectedType === 'room' && (
-            <TextField
-              label="Price (USD/mo)"
-              type="number"
-              fullWidth
-              {...register('price', {
-                required: 'Required',
-                min: { value: 1, message: 'Must be > 0' },
-              })}
-              error={!!errors.price}
-              helperText={errors.price?.message}
-              sx={{
-                mb: 4,
-                '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-                '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme.palette.primary.main,
-                },
-                '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: theme.palette.primary.dark,
-                },
-                '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-              }}
-            />
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+                Monthly Rent
+              </Typography>
+              <TextField
+                placeholder="1200"
+                type="number"
+                fullWidth
+                InputProps={{
+                  startAdornment: <AttachMoneyIcon sx={{ color: 'var(--primary)', mr: 1 }} />,
+                }}
+                {...register('price', {
+                  required: 'Price is required',
+                  min: { value: 1, message: 'Price must be greater than 0' },
+                })}
+                error={!!errors.price}
+                helperText={errors.price?.message || 'Enter the monthly rent amount in USD'}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    background: 'var(--background-secondary)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: 'var(--foreground)',
+                    '&:hover': {
+                      border: '1px solid var(--primary)',
+                    },
+                    '&.Mui-focused': {
+                      border: '1px solid var(--primary)',
+                    },
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none',
+                  },
+                  '& input::placeholder': {
+                    color: 'var(--foreground-secondary)',
+                    opacity: 1,
+                  },
+                }}
+              />
+            </Box>
           )}
 
           {/* Address (only if room) */}
           {selectedType === 'room' && (
-            <Controller
-              name="address"
-              control={control}
-              rules={{ required: 'Required' }}
-              render={({ field: { onChange, value } }) => (
-                <Autocomplete onLoad={onLoad} onPlaceChanged={() => onPlaceChanged(onChange)}>
-                  <TextField
-                    label="Address"
-                    fullWidth
-                    value={value}
-                    onChange={(e) => onChange(e.target.value)}
-                    error={!!errors.address}
-                    helperText={errors.address?.message}
-                    sx={{
-                      mb: 4,
-                      '& .MuiInputLabel-root': { color: theme.palette.primary.main },
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: theme.palette.primary.main,
-                      },
-                      '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: theme.palette.primary.dark,
-                      },
-                      '& .MuiInputBase-input': { color: theme.palette.primary.dark },
-                    }}
-                  />
-                </Autocomplete>
-              )}
-            />
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+                Address
+              </Typography>
+              <Controller
+                name="address"
+                control={control}
+                rules={{ required: 'Address is required' }}
+                render={({ field: { onChange, value } }) => (
+                  <Autocomplete onLoad={onLoad} onPlaceChanged={() => onPlaceChanged(onChange)}>
+                    <TextField
+                      placeholder="Start typing your address..."
+                      fullWidth
+                      value={value}
+                      onChange={(e) => onChange(e.target.value)}
+                      error={!!errors.address}
+                      helperText={errors.address?.message || 'We\'ll use this to help roommates find you'}
+                      InputProps={{
+                        startAdornment: <LocationOnIcon sx={{ color: 'var(--primary)', mr: 1 }} />,
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          background: 'var(--background-secondary)',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: 'var(--foreground)',
+                          '&:hover': {
+                            border: '1px solid var(--primary)',
+                          },
+                          '&.Mui-focused': {
+                            border: '1px solid var(--primary)',
+                          },
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          border: 'none',
+                        },
+                        '& input::placeholder': {
+                          color: 'var(--foreground-secondary)',
+                          opacity: 1,
+                        },
+                      }}
+                    />
+                  </Autocomplete>
+                )}
+              />
+            </Box>
           )}
 
-          {/* MULTIPLE Image Upload */}
-          <Button
-            variant="outlined"
-            component="label"
-            fullWidth
-            sx={{
-              mb: 4,
-              borderColor: theme.palette.primary.main,
-              color: theme.palette.primary.main,
-              textTransform: 'none',
-              px: 2,
-              py: 1,
-              borderRadius: 2,
-              '&:hover': {
-                backgroundColor: alpha(theme.palette.primary.light, 0.2),
-                borderColor: theme.palette.primary.dark,
-              },
-            }}
-          >
-            <PhotoCameraIcon sx={{ mr: 1 }} />
-            {imagePreviews.length > 0 ? 'Add/Change Images' : 'Upload Images'}
-            <input type="file" accept="image/*" hidden multiple onChange={handleFileChange} />
-          </Button>
-
-          {imagePreviews.length > 0 && (
-            <Box
+          {/* Image Upload */}
+          <Box sx={{ mb: 4 }}>
+            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+              Photos
+            </Typography>
+            <Button
+              variant="outlined"
+              component="label"
+              fullWidth
+              startIcon={<PhotoCameraIcon />}
               sx={{
-                display: 'flex',
-                gap: 2,
-                mb: 4,
-                overflowX: 'auto',
-                py: 1,
-                px: 1,
-                backgroundColor: alpha('#ffffff', 0.1),
-                borderRadius: 2,
+                py: 2,
+                border: '2px dashed rgba(255, 255, 255, 0.2)',
+                color: 'var(--foreground-secondary)',
+                textTransform: 'none',
+                borderRadius: '12px',
+                fontWeight: 500,
+                fontSize: '1rem',
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '2px dashed var(--primary)',
+                  color: 'var(--primary)',
+                },
               }}
             >
-              {imagePreviews.map((src, idx) => (
-                <Box
-                  key={idx}
-                  sx={{
-                    position: 'relative',
-                    minWidth: 100,
-                    minHeight: 100,
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                  }}
-                >
-                  <IconButton
-                    size="small"
-                    onClick={() => removeImageAt(idx)}
+              {imagePreviews.length > 0 ? `${imagePreviews.length} photo(s) selected - Add more` : 'Upload Photos'}
+              <input type="file" accept="image/*" hidden multiple onChange={handleFileChange} />
+            </Button>
+            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem', mt: 1 }}>
+              Upload high-quality photos to attract more interest. First photo will be the main image.
+            </Typography>
+          </Box>
+
+          {/* Image Previews */}
+          {imagePreviews.length > 0 && (
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1rem' }}>
+                Photo Preview
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
+                  gap: 2,
+                  p: 3,
+                  background: 'var(--background-secondary)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                {imagePreviews.map((src, idx) => (
+                  <Box
+                    key={idx}
                     sx={{
-                      position: 'absolute',
-                      top: 4,
-                      right: 4,
-                      backgroundColor: alpha('#FFFFFF', 0.8),
-                      '&:hover': { backgroundColor: '#FFFFFF' },
-                      zIndex: 10,
+                      position: 'relative',
+                      aspectRatio: '1/1',
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      border: idx === 0 ? '2px solid var(--primary)' : '1px solid rgba(255, 255, 255, 0.1)',
                     }}
                   >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                  <Box
-                    component="img"
-                    src={src}
-                    alt={`preview-${idx}`}
-                    sx={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                    }}
-                  />
-                </Box>
-              ))}
+                    {idx === 0 && (
+                      <Chip
+                        label="Main"
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          left: 8,
+                          background: 'var(--primary)',
+                          color: 'white',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          zIndex: 2,
+                        }}
+                      />
+                    )}
+                    <IconButton
+                      size="small"
+                      onClick={() => removeImageAt(idx)}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        background: 'rgba(0, 0, 0, 0.7)',
+                        color: 'white',
+                        zIndex: 2,
+                        '&:hover': {
+                          background: 'rgba(0, 0, 0, 0.9)',
+                        },
+                      }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                    <Box
+                      component="img"
+                      src={src}
+                      alt={`preview-${idx}`}
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                      }}
+                    />
+                  </Box>
+                ))}
+              </Box>
             </Box>
           )}
 
@@ -593,18 +797,38 @@ export default function CreatePostPage() {
             fullWidth
             disabled={submitting}
             sx={{
-              background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
+              py: 2,
+              fontSize: '1.1rem',
               fontWeight: 600,
-              py: 1.5,
-              borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              borderRadius: '16px',
+              textTransform: 'none',
+              background: 'var(--gradient-primary)',
+              color: 'white',
+              boxShadow: '0 8px 24px rgba(0, 122, 255, 0.3)',
               '&:hover': {
-                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                boxShadow: '0 6px 18px rgba(0,0,0,0.2)',
+                background: 'var(--primary-hover)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 32px rgba(0, 122, 255, 0.4)',
               },
+              '&:disabled': {
+                background: 'var(--background-secondary)',
+                color: 'var(--foreground-secondary)',
+                boxShadow: 'none',
+              },
+              transition: 'all 0.3s ease',
             }}
           >
-            {submitting ? <CircularProgress size={24} color="inherit" /> : 'Submit Post'}
+            {submitting ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <CircularProgress size={24} color="inherit" />
+                Creating your listing...
+              </Box>
+            ) : (
+              <>
+                <AddIcon sx={{ mr: 1 }} />
+                Publish Your Listing
+              </>
+            )}
           </Button>
         </form>
       </Paper>

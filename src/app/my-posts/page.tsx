@@ -7,43 +7,27 @@ import {
   Button,
   Typography,
   Card,
-  CardMedia,
   CardContent,
-  CardActions,
   CircularProgress,
   Chip,
   IconButton,
-  Stack,
-  useTheme,
-  styled,
+  Avatar,
 } from '@mui/material'
-import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
-import EditIcon from '@mui/icons-material/Edit'
-import HomeIcon from '@mui/icons-material/Home'
-import PersonIcon from '@mui/icons-material/Person'
+import { 
+  Add as AddIcon, 
+  Edit as EditIcon,
+  Home as HomeIcon,
+  Person as PersonIcon,
+  CalendarToday as CalendarIcon,
+  AttachMoney as MoneyIcon,
+  LocationOn as LocationIcon,
+} from '@mui/icons-material'
 import { onAuthStateChanged } from 'firebase/auth'
 import Link from 'next/link'
 import RequireAuth from '@/components/RequireAuth'
 import { auth } from '@/lib/firebaseConfig'
 import { getPostsByUser } from '@/lib/firestorePosts'
 import type { Timestamp } from 'firebase/firestore'
-
-// Styled “glassmorphic” card for a futuristic look
-const FuturisticCard = styled(Card)(({ theme }) => ({
-  background: 'rgba(255, 255, 255, 0.15)',
-  backdropFilter: 'blur(8px)',
-  border: `1px solid ${theme.palette.primary.light}33`,
-  borderRadius: 16,
-  overflow: 'hidden',
-  boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-  transition: 'transform 0.3s ease, box-shadow 0.3s ease',
-  display: 'flex',
-  flexDirection: 'column',
-  '&:hover': {
-    transform: 'translateY(-10px)',
-    boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
-  },
-}))
 
 type UserPost = {
   id: string
@@ -61,7 +45,6 @@ type UserPost = {
 }
 
 export default function MyPostsPage() {
-  const theme = useTheme()
   const [posts, setPosts] = useState<UserPost[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -76,10 +59,31 @@ export default function MyPostsPage() {
     return () => unsubscribe()
   }, [])
 
+  const formatDate = (timestamp: Timestamp) => {
+    const date = timestamp.toDate()
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays === 0) return 'Today'
+    if (diffDays === 1) return 'Yesterday'
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`
+    return date.toLocaleDateString()
+  }
+
   if (loading) {
     return (
-      <Box sx={{ textAlign: 'center', mt: 10 }}>
-        <CircularProgress size={48} color="primary" />
+      <Box 
+        sx={{ 
+          minHeight: '100vh',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          background: 'var(--gradient-background)',
+        }}
+      >
+        <CircularProgress sx={{ color: 'var(--primary)' }} size={48} />
       </Box>
     )
   }
@@ -89,225 +93,366 @@ export default function MyPostsPage() {
       <Box
         sx={{
           minHeight: '100vh',
-          background: `linear-gradient(160deg, ${theme.palette.primary.light}22, ${theme.palette.primary.main}11)`,
-          py: { xs: 4, md: 8 },
-          px: { xs: 2, md: 8 },
+          background: 'var(--gradient-background)',
+          color: 'var(--foreground)',
+          p: { xs: 2, md: 4 },
         }}
       >
-        {/* Header */}
-        <Box
-          sx={{
-            mb: 6,
-            textAlign: 'center',
-            position: 'relative',
-            overflow: 'visible',
-          }}
-        >
+        {/* Hero Header Section */}
+        <Box sx={{ textAlign: 'center', mb: 6, pt: 4 }}>
           <Typography
-            variant="h2"
+            variant="h3"
             sx={{
-              fontWeight: 700,
-              color: theme.palette.primary.dark,
-              mb: 1,
-              letterSpacing: 1,
-            }}
-          >
-            My Posts
-          </Typography>
-          <Typography
-            variant="body1"
-            sx={{
-              color: theme.palette.text.secondary,
               mb: 2,
-              maxWidth: 600,
-              mx: 'auto',
+              background: 'var(--gradient-primary)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: 700,
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
             }}
           >
-            View and manage all the rooms and roommate requests you’ve created. Click “Create New Post” to add a fresh listing.
+            Your Listings
           </Typography>
+          <Typography
+            sx={{
+              color: 'var(--foreground-secondary)',
+              fontSize: '1.2rem',
+              maxWidth: '600px',
+              mx: 'auto',
+              lineHeight: 1.6,
+              mb: 3,
+            }}
+          >
+            Manage your room listings and roommate requests all in one place
+          </Typography>
+          
           <Link href="/create" passHref>
             <Button
-              startIcon={<AddCircleOutlineIcon />}
-              variant="contained"
-              size="large"
+              startIcon={<AddIcon />}
+              className="btn-primary"
               sx={{
-                mt: 2,
-                background: `linear-gradient(90deg, ${theme.palette.primary.light}, ${theme.palette.primary.main})`,
-                color: '#fff',
-                textTransform: 'none',
                 px: 4,
                 py: 1.5,
-                borderRadius: 8,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: '16px',
+                background: 'var(--gradient-primary)',
+                color: 'white',
+                boxShadow: '0 8px 24px rgba(0, 122, 255, 0.3)',
                 '&:hover': {
-                  background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
-                  boxShadow: '0 6px 18px rgba(0,0,0,0.2)',
+                  background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 12px 32px rgba(0, 122, 255, 0.4)',
                 },
+                transition: 'all 0.3s ease',
               }}
             >
-              Create New Post
+              Create New Listing
             </Button>
           </Link>
         </Box>
 
-        {posts.length === 0 ? (
-          <Typography variant="h6" color="text.secondary" align="center">
-            You haven’t posted anything yet.
-          </Typography>
-        ) : (
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 4,
-              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            }}
-          >
-            {posts.map((post) => {
-              const date = post.createdAt.toDate()
-                const postedAgo = Math.floor((Date.now() - date.getTime()) / 86400000)
+        <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
+          {posts.length === 0 ? (
+            <Box
+              className="dark-card"
+              sx={{
+                textAlign: 'center',
+                py: 12,
+                px: 6,
+                background: 'var(--background-card)',
+                borderRadius: '24px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                maxWidth: 600,
+                mx: 'auto',
+              }}
+            >
+              <Box
+                sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  background: 'var(--gradient-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mx: 'auto',
+                  mb: 4,
+                  opacity: 0.8,
+                }}
+              >
+                <HomeIcon sx={{ fontSize: 60, color: 'white' }} />
+              </Box>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  color: 'var(--foreground)', 
+                  fontWeight: 600, 
+                  mb: 2 
+                }}
+              >
+                No listings yet
+              </Typography>
+              <Typography 
+                sx={{ 
+                  color: 'var(--foreground-secondary)', 
+                  fontSize: '1.1rem',
+                  mb: 4,
+                  lineHeight: 1.6,
+                }}
+              >
+                Ready to find your perfect roommate or list your room? Create your first listing and start connecting with amazing people!
+              </Typography>
+              <Link href="/create" passHref>
+                <Button
+                  startIcon={<AddIcon />}
+                  className="btn-primary"
+                  sx={{
+                    px: 3,
+                    py: 1.2,
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    borderRadius: '12px',
+                    background: 'var(--gradient-primary)',
+                    color: 'white',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
+                      transform: 'translateY(-1px)',
+                    },
+                  }}
+                >
+                  Get Started
+                </Button>
+              </Link>
+            </Box>
+          ) : (
+            <>
+              {/* Stats Bar */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: 4,
+                  mb: 6,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Box className="dark-card" sx={{ px: 4, py: 2, borderRadius: '16px', textAlign: 'center' }}>
+                  <Typography sx={{ color: 'var(--primary)', fontSize: '2rem', fontWeight: 700 }}>
+                    {posts.length}
+                  </Typography>
+                  <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                    Total Listings
+                  </Typography>
+                </Box>
+                <Box className="dark-card" sx={{ px: 4, py: 2, borderRadius: '16px', textAlign: 'center' }}>
+                  <Typography sx={{ color: 'var(--primary)', fontSize: '2rem', fontWeight: 700 }}>
+                    {posts.filter(p => p.type === 'room').length}
+                  </Typography>
+                  <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                    Room Listings
+                  </Typography>
+                </Box>
+                <Box className="dark-card" sx={{ px: 4, py: 2, borderRadius: '16px', textAlign: 'center' }}>
+                  <Typography sx={{ color: 'var(--primary)', fontSize: '2rem', fontWeight: 700 }}>
+                    {posts.filter(p => p.type === 'roommate').length}
+                  </Typography>
+                  <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                    Roommate Requests
+                  </Typography>
+                </Box>
+              </Box>
 
-                function alpha(color: string, opacity: number) {
-                return `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`
-                }
-
-                return (
-                <FuturisticCard key={post.id}>
-                  {/* ─── Fixed‐Height Image Container ─── */}
-                  <Box
+              {/* Posts Grid */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: 'repeat(1, 1fr)',
+                    sm: 'repeat(2, 1fr)',
+                    lg: 'repeat(3, 1fr)',
+                  },
+                  gap: 3,
+                }}
+              >
+                {posts.map((post) => (
+                  <Card
+                    key={post.id}
+                    className="dark-card scale-on-hover"
                     sx={{
-                      height: 180,                // fixed height for every card
-                      width: '100%',
-                      backgroundColor: alpha(theme.palette.primary.main, 0.1),
-                      position: 'relative',
+                      background: 'var(--background-card)',
+                      borderRadius: '20px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
                       overflow: 'hidden',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'translateY(-8px) scale(1.02)',
+                        boxShadow: '0 20px 40px rgba(0, 122, 255, 0.15)',
+                        border: '1px solid var(--primary)',
+                      },
                     }}
                   >
-                    {post.images && post.images.length > 0 ? (
-                      <CardMedia
-                        component="img"
-                        image={post.images[0]}
-                        alt={post.title}
-                        sx={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          height: '120%',       // slightly larger so it always covers
-                          width: 'auto',
-                          minWidth: '100%',     // ensure no whitespace on sides
-                          transform: 'translate(-50%, -50%)',
-                          objectFit: 'cover',
-                        }}
-                      />
-                    ) : (
-                      <Box
-                        sx={{
-                          height: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <HomeIcon sx={{ fontSize: 64, color: theme.palette.primary.main }} />
-                      </Box>
-                    )}
-                  </Box>
-
-                  <CardContent sx={{ px: 3, py: 2, flexGrow: 1 }}>
-                    {/* Post Type Chip */}
-                    <Stack
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      mb={1}
+                    {/* Image Section */}
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        width: '100%',
+                        aspectRatio: '16/10',
+                        overflow: 'hidden',
+                        background: 'var(--background-secondary)',
+                      }}
                     >
+                      {post.images && post.images.length > 0 ? (
+                        <Box
+                          component="img"
+                          src={post.images[0]}
+                          alt={post.title}
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            transition: 'transform 0.3s ease',
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          sx={{
+                            width: '100%',
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            background: 'var(--gradient-primary)',
+                            opacity: 0.8,
+                          }}
+                        >
+                          <HomeIcon sx={{ fontSize: 48, color: 'white' }} />
+                        </Box>
+                      )}
+                      
+                      {/* Post Type Badge */}
                       <Chip
                         icon={post.type === 'room' ? <HomeIcon /> : <PersonIcon />}
-                        label={post.type === 'room' ? 'Room Listing' : 'Roommate Request'}
-                        size="small"
+                        label={post.type === 'room' ? 'Room' : 'Roommate'}
                         sx={{
-                          backgroundColor: alpha(theme.palette.primary.light, 0.2),
-                          color: theme.palette.primary.dark,
+                          position: 'absolute',
+                          top: 12,
+                          left: 12,
+                          background: post.type === 'room' ? 'var(--gradient-primary)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                          color: 'white',
                           fontWeight: 600,
-                          borderRadius: 1,
+                          fontSize: '0.8rem',
+                          '& .MuiChip-icon': {
+                            color: 'white',
+                          }
                         }}
                       />
-                      <Typography variant="caption" color="text.secondary">
-                        {postedAgo === 0
-                          ? 'Today'
-                          : postedAgo === 1
-                          ? '1 day ago'
-                          : `${postedAgo} days ago`}
-                      </Typography>
-                    </Stack>
+                    </Box>
 
-                    {/* Title */}
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        mb: 1,
-                        color: theme.palette.primary.dark,
-                        fontWeight: 700,
-                        lineHeight: 1.2,
-                        height: '2.4em',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {post.title}
-                    </Typography>
-
-                    {/* Description */}
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        mb: 1,
-                        color: theme.palette.text.secondary,
-                        lineHeight: 1.4,
-                        height: '3.6em',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {post.description}
-                    </Typography>
-
-                    {/* Price (if room) */}
-                    {post.type === 'room' && (
+                    <CardContent sx={{ p: 3 }}>
+                      {/* Title */}
                       <Typography
-                        variant="subtitle1"
+                        variant="h6"
                         sx={{
-                          color: theme.palette.primary.main,
-                          fontWeight: 700,
-                        }}
-                      >
-                        ${post.price.toLocaleString()}/mo
-                      </Typography>
-                    )}
-                  </CardContent>
-
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 3, pb: 2 }}>
-                    <Link href={`/create/${post.id}`} passHref>
-                      <Button
-                        size="small"
-                        startIcon={<EditIcon />}
-                        sx={{
-                          color: theme.palette.primary.dark,
-                          textTransform: 'none',
+                          color: 'var(--foreground)',
                           fontWeight: 600,
-                          '&:hover': {
-                            backgroundColor: alpha(theme.palette.primary.light, 0.3),
-                          },
+                          fontSize: '1.2rem',
+                          mb: 1.5,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        Edit
-                      </Button>
-                    </Link>
-                  </CardActions>
-                </FuturisticCard>
-              )
-            })}
-          </Box>
-        )}
+                        {post.title}
+                      </Typography>
+
+                      {/* Description */}
+                      <Typography
+                        sx={{
+                          color: 'var(--foreground-secondary)',
+                          fontSize: '0.95rem',
+                          lineHeight: 1.5,
+                          mb: 2,
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                          minHeight: '3rem',
+                        }}
+                      >
+                        {post.description}
+                      </Typography>
+
+                      {/* Details */}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                        {post.type === 'room' && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <MoneyIcon sx={{ fontSize: 18, color: 'var(--primary)' }} />
+                            <Typography sx={{ color: 'var(--primary)', fontWeight: 600, fontSize: '1.1rem' }}>
+                              ${post.price.toLocaleString()}/month
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        {post.address && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <LocationIcon sx={{ fontSize: 16, color: 'var(--foreground-secondary)' }} />
+                            <Typography 
+                              sx={{ 
+                                color: 'var(--foreground-secondary)', 
+                                fontSize: '0.9rem',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {post.address}
+                            </Typography>
+                          </Box>
+                        )}
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CalendarIcon sx={{ fontSize: 16, color: 'var(--foreground-secondary)' }} />
+                          <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                            {formatDate(post.createdAt)}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      {/* Action Button */}
+                      <Link href={`/create/${post.id}`} passHref>
+                        <Button
+                          startIcon={<EditIcon />}
+                          fullWidth
+                          sx={{
+                            textTransform: 'none',
+                            borderRadius: '12px',
+                            py: 1.2,
+                            fontWeight: 600,
+                            background: 'var(--background-secondary)',
+                            color: 'var(--primary)',
+                            border: '1px solid rgba(0, 122, 255, 0.3)',
+                            '&:hover': {
+                              background: 'var(--primary)',
+                              color: 'white',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 4px 12px rgba(0, 122, 255, 0.3)',
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          Edit Listing
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Box>
+            </>
+          )}
+        </Box>
       </Box>
     </RequireAuth>
   )
