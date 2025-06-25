@@ -3,6 +3,7 @@
 
 import React from 'react';
 import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+import { GOOGLE_MAPS_API_KEY } from '@/lib/mapsConfig';
 
 interface InteractiveMapProps {
   lat: number;
@@ -11,7 +12,7 @@ interface InteractiveMapProps {
 
 export default function InteractiveMap({ lat, lng }: InteractiveMapProps) {
   const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: "AIzaSyAHy9t-zxAHjbwgGlmWwl1jARFP5Ua7Q_",
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });
 
   if (!isLoaded) {

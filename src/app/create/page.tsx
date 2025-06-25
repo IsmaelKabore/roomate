@@ -27,6 +27,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney'
 import LocationOnIcon from '@mui/icons-material/LocationOn'
+import { GOOGLE_MAPS_API_KEY, MAP_LIBRARIES } from '@/lib/mapsConfig'
 
 type FormValues = {
   type: 'room' | 'roommate'
@@ -47,9 +48,6 @@ interface CreatePostPayload {
   price?: number
   keywords: string[]
 }
-
-// Static array for Google Maps libraries
-const MAP_LIBRARIES: ('places')[] = ['places']
 
 export default function CreatePostPage() {
   const router = useRouter()
@@ -77,7 +75,7 @@ export default function CreatePostPage() {
 
   // Google Maps Autocomplete
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: "AIzaSyAHy9t-zxAHjbwgGlmWwl1jARFP5Ua7Q_",
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: MAP_LIBRARIES,
   })
   const autoRef = useRef<google.maps.places.Autocomplete | null>(null)
@@ -207,7 +205,14 @@ export default function CreatePostPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-      const body = await res.json()
+      const text = await res.text()
+      let body
+      try {
+        body = JSON.parse(text)
+      } catch (e) {
+        console.error('Non-JSON response:', text)
+        throw new Error('Server error: invalid response format')
+      }
       if (!res.ok) {
         throw new Error(body.error || 'Failed to create post')
       }

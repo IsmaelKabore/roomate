@@ -3,15 +3,14 @@
 import { useRef, useState } from 'react';
 import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
 import { CircularProgress, Typography, Box, Button } from '@mui/material';
-
-const MAP_LIBRARIES: ('places')[] = ['places'];
+import { GOOGLE_MAPS_API_KEY, MAP_LIBRARIES } from '@/lib/mapsConfig';
 
 export default function MapSection() {
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
   // Get API key from environment variable
-  const apiKey = 'AIzaSyAHy9t-zxAHjbwgGlmWWljARFP5Ua7Q_Ec';
+  const apiKey = GOOGLE_MAPS_API_KEY;
 
   // Load Google Maps JS only when this component is rendered
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
