@@ -135,8 +135,8 @@ export default function DiscoverRootPage() {
 
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
           gap: 4,
           maxWidth: 1200,
           width: '100%',
@@ -198,7 +198,9 @@ export default function DiscoverRootPage() {
 
 // Optimized card styles - reduced complexity for better performance
 const cardSx = {
-  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: { xs: 260, md: 360 },
   background: 'var(--background-card)',
   border: '1px solid rgba(255, 255, 255, 0.1)',
   borderRadius: '16px',

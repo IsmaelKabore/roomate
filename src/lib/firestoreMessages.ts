@@ -184,25 +184,57 @@ export async function getRooms(
   startAfterCreatedAt?: number
 ): Promise<RoomSummary[]> {
   const roomsRef = collection(db, 'messages')
-  let qBase = query(roomsRef, where('participants', 'array-contains', userId))
-  let q
-  if (startAfterCreatedAt) {
-    q = query(qBase, orderBy('createdAt', 'desc'), startAfter(startAfterCreatedAt), limit(limitCount))
-  } else {
-    q = query(qBase, orderBy('createdAt', 'desc'), limit(limitCount))
-  }
-  const snap = await getDocs(q)
-  return snap.docs.map((d: QueryDocumentSnapshot<DocumentData>) => {
-    const data = d.data() as RoomDoc
-    const roomId = d.id
-    const unreadCount = data.unreadCounts?.[userId] ?? 0
-    return {
-      id: roomId,
-      participants: data.participants,
-      unreadCount,
-      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : 0,
+  
+  try {
+    // Try the optimized query first (requires composite index)
+    let qBase = query(roomsRef, where('participants', 'array-contains', userId))
+    let q
+    if (startAfterCreatedAt) {
+      q = query(qBase, orderBy('createdAt', 'desc'), startAfter(startAfterCreatedAt), limit(limitCount))
+    } else {
+      q = query(qBase, orderBy('createdAt', 'desc'), limit(limitCount))
     }
-  })
+    const snap = await getDocs(q)
+    return snap.docs.map((d: QueryDocumentSnapshot<DocumentData>) => {
+      const data = d.data() as RoomDoc
+      const roomId = d.id
+      const unreadCount = data.unreadCounts?.[userId] ?? 0
+      return {
+        id: roomId,
+        participants: data.participants,
+        unreadCount,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : 0,
+      }
+    })
+  } catch (error: any) {
+    // Fallback: if composite index doesn't exist, fetch all user rooms and sort in memory
+    console.warn('Composite index not found, using fallback query:', error.message)
+    
+    const qFallback = query(roomsRef, where('participants', 'array-contains', userId))
+    const snap = await getDocs(qFallback)
+    const rooms = snap.docs.map((d: QueryDocumentSnapshot<DocumentData>) => {
+      const data = d.data() as RoomDoc
+      const roomId = d.id
+      const unreadCount = data.unreadCounts?.[userId] ?? 0
+      return {
+        id: roomId,
+        participants: data.participants,
+        unreadCount,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : 0,
+      }
+    })
+    
+    // Sort by createdAt in memory (less efficient but works without index)
+    rooms.sort((a, b) => b.createdAt - a.createdAt)
+    
+    // Handle pagination manually
+    if (startAfterCreatedAt) {
+      const startIndex = rooms.findIndex(room => room.createdAt < startAfterCreatedAt)
+      return rooms.slice(startIndex, startIndex + limitCount)
+    } else {
+      return rooms.slice(0, limitCount)
+    }
+  }
 }
 
 /**

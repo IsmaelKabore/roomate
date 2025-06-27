@@ -11,27 +11,16 @@ import { auth } from '@/lib/firebaseConfig';
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isClient, setIsClient] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
 
   useEffect(() => {
-    // Mark that we're on the client side
-    setIsClient(true);
-    
-    // Faster auth check with timeout
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500); // Max 500ms wait
-
+    setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setIsLoading(false);
-      clearTimeout(timer);
     });
     
-    return () => {
-      unsubscribe();
-      clearTimeout(timer);
-    };
+    return () => unsubscribe();
   }, []);
 
   const handleLogout = async () => {
@@ -151,7 +140,10 @@ export default function Header() {
             </Button>
           </Link>
 
-          {isClient && !isLoading && (
+          {!hasMounted || isLoading ? (
+            // Show placeholder during hydration and loading
+            <Box sx={{ width: 200, height: 40 }} />
+          ) : (
             <>
               {user ? (
                 <>

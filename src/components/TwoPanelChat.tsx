@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { FixedSizeList as List, ListChildComponentProps } from 'react-window'
+import { FixedSizeList, ListChildComponentProps } from 'react-window'
+import ClientOnly from './ClientOnly'
 
 import {
   Box,
@@ -19,6 +20,7 @@ import {
   CircularProgress,
   Chip,
   Button,
+  List as MuiList,
 } from '@mui/material'
 
 import SearchIcon from '@mui/icons-material/Search'
@@ -71,11 +73,45 @@ interface TwoPanelChatProps {
   initialRoomId?: string
 }
 
+// Helper component to wrap the react-window List
+const MessageList = ({ messages, MessageRow }: { messages: MessageDoc[], MessageRow: any }) => {
+  const [mounted, setMounted] = useState(false)
+  
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  if (!mounted || messages.length === 0) {
+    return (
+      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress sx={{ color: 'var(--primary)' }} size={28} />
+      </Box>
+    )
+  }
+  
+  // Calculate height based on available messages, with min/max constraints
+  const calculatedHeight = Math.min(Math.max(messages.length * 80, 240), 480)
+  
+  return (
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <FixedSizeList
+        height={calculatedHeight}
+        itemCount={messages.length}
+        itemSize={80}
+        width="100%"
+      >
+        {MessageRow}
+      </FixedSizeList>
+    </Box>
+  )
+}
+
 export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   const router = useRouter()
 
-  // Make sure auth is defined (user must be signed in)
-  const currentUser = auth.currentUser
+  // Add hydration loading state
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   // ─── Sidebar "inbox" state ──────────────────────────────────────
   const [inboxItems, setInboxItems] = useState<InboxItem[]>([])
@@ -109,6 +145,35 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   const smartReplyTimeout = useRef<NodeJS.Timeout | null>(null)
 
   const inboxListRef = useRef<HTMLUListElement>(null)
+
+  // Helper function to format time consistently (client-side only)
+  const formatTime = useCallback((timestamp: number) => {
+    if (timestamp <= 0) return ''
+    try {
+      const date = new Date(timestamp)
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      return `${hours}:${minutes}`
+    } catch {
+      return ''
+    }
+  }, [])
+
+  // Initialize auth state and handle hydration
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setCurrentUser(user)
+      setIsLoading(false)
+      
+      if (!user) {
+        router.replace('/auth/login')
+      }
+    })
+
+    return () => unsubscribe()
+  }, [router])
+
+
 
   // Helper to fetch smart replies from our API
   async function fetchSmartReplies(latestIncoming: string) {
@@ -185,21 +250,59 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
 
   // Helper to load rooms (paginated)
   const loadRooms = useCallback(async (append = false) => {
+    if (!currentUser) return
+    
     if (append) setLoadingMoreRooms(true)
     else setInboxLoading(true)
-    const lastCreatedAt = append && lastRoomCreatedAtRef.current ? lastRoomCreatedAtRef.current : undefined
-    const rooms: RoomSummary[] = await getRooms(currentUser.uid, ROOMS_PAGE_SIZE, lastCreatedAt)
-    setInboxItems((prev) => append ? [...prev, ...rooms] : rooms)
-    setHasMoreRooms(rooms.length === ROOMS_PAGE_SIZE)
-    if (rooms.length > 0) lastRoomCreatedAtRef.current = rooms[rooms.length - 1].createdAt
-    if (append) setLoadingMoreRooms(false)
-    else setInboxLoading(false)
+    
+    try {
+      const lastCreatedAt = append && lastRoomCreatedAtRef.current ? lastRoomCreatedAtRef.current : undefined
+      const rooms: RoomSummary[] = await getRooms(currentUser.uid, ROOMS_PAGE_SIZE, lastCreatedAt)
+      
+      // Convert RoomSummary to InboxItem format
+      const inboxRooms: InboxItem[] = await Promise.all(
+        rooms.map(async (room) => {
+          const otherId = room.participants.find(p => p !== currentUser.uid) || ''
+          let name = 'Unknown User'
+          let avatarUrl = ''
+          
+          try {
+            const profile = await fetchUserProfile(otherId)
+            if (profile) {
+              name = profile.name || 'Unknown User'
+              avatarUrl = profile.profilePicture || ''
+            }
+          } catch (error) {
+            console.error('Error fetching user profile:', error)
+          }
+          
+          return {
+            id: room.id,
+            otherId,
+            name,
+            avatarUrl,
+            latestText: 'No messages yet',
+            latestTimestamp: room.createdAt,
+            unreadCount: room.unreadCount
+          }
+        })
+      )
+      
+      setInboxItems((prev) => append ? [...prev, ...inboxRooms] : inboxRooms)
+      setHasMoreRooms(rooms.length === ROOMS_PAGE_SIZE)
+      if (rooms.length > 0) lastRoomCreatedAtRef.current = rooms[rooms.length - 1].createdAt
+    } catch (error) {
+      console.error('Error loading rooms:', error)
+    } finally {
+      if (append) setLoadingMoreRooms(false)
+      else setInboxLoading(false)
+    }
   }, [currentUser])
 
   // Helper to render a single message row for react-window
   const MessageRow = ({ index, style }: ListChildComponentProps) => {
     const m = messages[index]
-    const isMe = m.senderId === currentUser.uid
+    const isMe = currentUser ? m.senderId === currentUser.uid : false
     return (
       <div style={style}>
         <Box
@@ -235,22 +338,21 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
               {m.text}
             </Typography>
           </Paper>
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'var(--foreground-secondary)',
-              fontSize: '0.75rem',
-              mt: 0.5,
-              display: 'block',
-              textAlign: isMe ? 'right' : 'left',
-              px: 1,
-            }}
-          >
-            {new Date(m.timestamp).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </Typography>
+          <ClientOnly>
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'var(--foreground-secondary)',
+                fontSize: '0.75rem',
+                mt: 0.5,
+                display: 'block',
+                textAlign: isMe ? 'right' : 'left',
+                px: 1,
+              }}
+            >
+              {formatTime(m.timestamp)}
+            </Typography>
+          </ClientOnly>
         </Box>
       </div>
     )
@@ -269,12 +371,16 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
   // 1) Load current user's inbox (list of rooms) and set initial room
   // ══════════════════════════════════════════════════════════════════
   useEffect(() => {
-    if (!currentUser) {
-      router.replace('/auth/login')
-      return
-    }
+    if (!currentUser || isLoading) return
 
     loadRooms()
+  }, [currentUser, isLoading, loadRooms])
+
+  // ══════════════════════════════════════════════════════════════════
+  // 2) Handle active room subscription
+  // ══════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!currentUser || !activeRoomId) return
 
     async function initRoomAndSubscribe() {
       try {
@@ -315,7 +421,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
     }
 
     initRoomAndSubscribe()
-  }, [currentUser, initialRoomId, router, loadRooms])
+  }, [currentUser, activeRoomId, debouncedFetchSmartReplies])
 
   // ══════════════════════════════════════════════════════════════════
   // 2) Handle sending a message
@@ -357,8 +463,8 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
     loadRooms(true)
   }
 
-  // Show loading if we don't have current user
-  if (!currentUser) {
+  // Show loading during hydration or when user is not authenticated
+  if (isLoading || !currentUser) {
     return (
       <Box
         sx={{
@@ -381,6 +487,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
         height: '100vh', 
         background: 'var(--gradient-background)',
         color: 'var(--foreground)',
+        overflow: 'hidden',
       }}
     >
       {/** ─────────────────────────────────────────────────────────────────
@@ -397,7 +504,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
           flexDirection: 'column',
           borderRadius: 0,
           border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+          borderRight: '1px solid rgba(255, 255, 255, 0.1)',
           overflow: 'hidden',
         }}
       >
@@ -405,7 +512,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
         <Box
           sx={{
             px: 3,
-            py: 2.5,
+            height: 80,
             background: 'var(--gradient-primary)',
             color: 'white',
             display: 'flex',
@@ -483,7 +590,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
           </Box>
         ) : (
           <>
-            <List
+            <MuiList
               disablePadding
               sx={{ overflowY: 'auto', flex: 1 }}
               ref={inboxListRef}
@@ -569,21 +676,20 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                         }
                       />
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
-                        <Typography
-                          variant="caption"
-                          sx={{ 
-                            color: isActive ? 'rgba(255, 255, 255, 0.7)' : 'var(--foreground-secondary)', 
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                          }}
-                        >
-                          {it.latestTimestamp > 0
-                            ? new Date(it.latestTimestamp).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : ''}
-                        </Typography>
+                        <ClientOnly>
+                          <Typography
+                            variant="caption"
+                            sx={{ 
+                              color: isActive ? 'rgba(255, 255, 255, 0.7)' : 'var(--foreground-secondary)', 
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {it.latestTimestamp > 0
+                              ? formatTime(it.latestTimestamp)
+                              : ''}
+                          </Typography>
+                        </ClientOnly>
                       </Box>
                     </ListItemButton>
                     {idx < inboxItems.length - 1 && (
@@ -592,7 +698,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                   </Box>
                 )
               })}
-            </List>
+            </MuiList>
           </>
         )}
       </Paper>
@@ -606,6 +712,8 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
           display: 'flex',
           flexDirection: 'column',
           background: 'var(--background-secondary)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          borderLeft: 'none',
         }}
       >
         {!activeRoomId ? (
@@ -656,6 +764,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                 color: 'var(--foreground)',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: 0,
+                border: 'none',
               }}
             >
               <IconButton
@@ -773,15 +882,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                   </Typography>
                 </Box>
               ) : (
-                <List
-                  height={500}
-                  itemCount={messages.length}
-                  itemSize={80}
-                  width={'100%'}
-                  style={{ flex: 1 }}
-                >
-                  {MessageRow}
-                </List>
+                <MessageList messages={messages} MessageRow={MessageRow} />
               )}
               <div ref={bottomRef} />
             </Box>
