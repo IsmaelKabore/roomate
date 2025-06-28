@@ -255,10 +255,32 @@ export default function RoommatesPage() {
       alert('You must be logged in to chat.')
       return
     }
+    
+    if (!user.uid) {
+      console.error('User UID is missing:', user)
+      alert('User authentication error. Please try logging in again.')
+      return
+    }
+    
+    if (!post.userId) {
+      console.error('Post userId is missing:', post)
+      alert('Invalid post data. Please try again.')
+      return
+    }
+    
+    console.log('Creating chat room between:', user.uid, 'and', post.userId)
     const roomId = [user.uid, post.userId].sort().join('_')
-    createRoom(roomId, [user.uid, post.userId]).then(() => {
-      router.push(`/messages/${roomId}`)
-    })
+    console.log('Generated room ID:', roomId)
+    
+    createRoom(roomId, [user.uid, post.userId])
+      .then(() => {
+        console.log('Room created successfully, navigating to:', `/messages/${roomId}`)
+        router.push(`/messages/${roomId}`)
+      })
+      .catch((error) => {
+        console.error('Error creating room:', error)
+        alert('Failed to create chat room. Please try again.')
+      })
   }
 
   const toggleFavorite = (postId: string) => {

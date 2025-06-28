@@ -11,11 +11,15 @@ import {
   Typography,
   Button,
   CircularProgress,
-  Slider,
   TextField,
   IconButton,
   Pagination,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material'
+import { SelectChangeEvent } from '@mui/material/Select'
 import { ArrowBackIosNew, ArrowForwardIos, Chat as ChatIcon } from '@mui/icons-material'
 import { useRouter } from 'next/navigation'
 import { getRoomPosts } from '@/lib/firestorePosts'
@@ -145,11 +149,9 @@ export default function RoomsPage() {
   const [profilesLoading, setProfilesLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const [sortBy, setSortBy] = useState('createdAt_desc') // Initial sort
 
-  // Filter state - Initialize with reasonable defaults
-  const [priceRange, setPriceRange] = useState<number[]>([0, 5000])
-  const [minPrice, setMinPrice] = useState<number>(0)
-  const [maxPrice, setMaxPrice] = useState<number>(5000)
+  // Filter state
   const [addressFilter, setAddressFilter] = useState<string>('')
 
   // Pagination state
@@ -161,54 +163,23 @@ export default function RoomsPage() {
       try {
         setLoading(true)
         setError(null)
-        console.log('Fetching room posts...')
         
         const raw: RoomPost[] = await getRoomPosts()
-        console.log('Fetched rooms:', raw.length, raw)
 
         if (raw.length === 0) {
-          console.log('No room posts found in database')
           setRooms([])
           setLoading(false)
           return
         }
 
-        // Derive a simple locationLabel from the address (text before comma)
         const withLocation = raw.map((p) => ({
           ...p,
           locationLabel: p.address?.split(',')[0]?.trim() || 'Other',
         }))
 
-        // Sort by createdAt descending (most recent first)
-        withLocation.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
-
-        // Compute actual min/max price from fetched data
-        const validPrices = withLocation
-          .map((r) => r.price)
-          .filter((p): p is number => typeof p === 'number' && p > 0)
-        
-        console.log('Valid prices found:', validPrices)
-
-        if (validPrices.length > 0) {
-          const derivedMin = Math.min(...validPrices)
-          const derivedMax = Math.max(...validPrices)
-          console.log('Price range:', derivedMin, 'to', derivedMax)
-          
-          setMinPrice(derivedMin)
-          setMaxPrice(derivedMax)
-          setPriceRange([derivedMin, derivedMax])
-        } else {
-          // No valid prices found, use defaults
-          console.log('No valid prices found, using defaults')
-          setMinPrice(0)
-          setMaxPrice(5000)
-          setPriceRange([0, 5000])
-        }
-
         setRooms(withLocation)
         setLoading(false)
 
-        // Load profiles in background after initial render
         loadProfiles(withLocation)
       } catch (error) {
         console.error('Error loading rooms:', error)
@@ -220,13 +191,9 @@ export default function RoomsPage() {
     loadRooms()
   }, [])
 
-  // Separate function to load profiles asynchronously
   const loadProfiles = async (roomsData: RoomPost[]): Promise<void> => {
     setProfilesLoading(true)
     try {
-      console.log('Loading profiles for', roomsData.length, 'rooms')
-      
-      // Load profiles in batches to avoid overwhelming the system
       const batchSize = 5
       const batches: RoomPost[][] = []
       for (let i = 0; i < roomsData.length; i += batchSize) {
@@ -251,7 +218,6 @@ export default function RoomsPage() {
           })
         )
 
-        // Update rooms with the enriched batch
         setRooms(prevRooms => 
           prevRooms.map(room => {
             const enriched = enrichedBatch.find(er => er.id === room.id)
@@ -272,498 +238,153 @@ export default function RoomsPage() {
       alert('You must be logged in to chat.')
       return
     }
+    
+    if (!user.uid) {
+      console.error('User UID is missing:', user)
+      alert('User authentication error. Please try logging in again.')
+      return
+    }
+    
+    if (!room.userId) {
+      console.error('Room userId is missing:', room)
+      alert('Invalid room data. Please try again.')
+      return
+    }
+    
+    console.log('Creating chat room between:', user.uid, 'and', room.userId)
     const roomId = [user.uid, room.userId].sort().join('_')
-    createRoom(roomId, [user.uid, room.userId]).then(() => {
-      router.push(`/messages/${roomId}`)
-    })
+    console.log('Generated room ID:', roomId)
+    
+    createRoom(roomId, [user.uid, room.userId])
+      .then(() => {
+        console.log('Room created successfully, navigating to:', `/messages/${roomId}`)
+        router.push(`/messages/${roomId}`)
+      })
+      .catch((error) => {
+        console.error('Error creating room:', error)
+        alert('Failed to create chat room. Please try again.')
+      })
   }
 
-  // Memoized filtered rooms for better performance
-  const filteredRooms = useMemo(() => {
-    console.log('Filtering rooms with price range:', priceRange, 'address filter:', addressFilter)
-    console.log('All rooms:', rooms.map(r => ({ title: r.title, price: r.price })))
-    
-    const filtered = rooms.filter((room) => {
-      // Price filtering - strict filtering based on slider values
-      let matchesPrice = true
-      
-      if (room.price && typeof room.price === 'number' && room.price > 0) {
-        // Room has a valid price - check if it's within the range
-        matchesPrice = room.price >= priceRange[0] && room.price <= priceRange[1]
-        console.log(`Room "${room.title}" price: $${room.price}, range: $${priceRange[0]}-$${priceRange[1]}, matches: ${matchesPrice}`)
-      } else {
-        // Room has no price or invalid price - only include if slider starts at minimum possible value
-        matchesPrice = priceRange[0] === minPrice
-        console.log(`Room "${room.title}" has no price, minPrice: ${minPrice}, range starts at: ${priceRange[0]}, matches: ${matchesPrice}`)
-      }
-      
-      // Address filtering
-      const matchesAddress = !addressFilter || 
-        room.address?.toLowerCase().includes(addressFilter.toLowerCase()) ||
-        room.locationLabel?.toLowerCase().includes(addressFilter.toLowerCase())
-      
-      const matches = matchesPrice && matchesAddress
-      
-      console.log(`Room "${room.title}": price=${room.price}, matchesPrice=${matchesPrice}, matchesAddress=${matchesAddress}, finalMatch=${matches}`)
-      
-      return matches
+  const filteredAndSortedRooms = useMemo(() => {
+    let result = rooms.filter((room) => {
+      if (!addressFilter) return true
+      return room.address?.toLowerCase().includes(addressFilter.toLowerCase()) ||
+             room.locationLabel?.toLowerCase().includes(addressFilter.toLowerCase())
     })
-    
-    console.log('Filtered rooms count:', filtered.length, 'out of', rooms.length)
-    console.log('Filtered rooms:', filtered.map(r => ({ title: r.title, price: r.price })))
-    return filtered
-  }, [rooms, priceRange, addressFilter, minPrice])
 
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredRooms.length / itemsPerPage)
-  const startIdx = (page - 1) * itemsPerPage
-  const paginatedRooms = filteredRooms.slice(startIdx, startIdx + itemsPerPage)
+    if (sortBy === 'price_desc') {
+      result.sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
+    } else if (sortBy === 'price_asc') {
+      result.sort((a, b) => (a.price ?? 0) - (b.price ?? 0))
+    } else {
+      result.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
+    }
+
+    return result
+  }, [rooms, addressFilter, sortBy])
+
+  const totalPages = Math.ceil(filteredAndSortedRooms.length / itemsPerPage)
+  const paginatedRooms = filteredAndSortedRooms.slice((page - 1) * itemsPerPage, page * itemsPerPage)
 
   const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
     setPage(value)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  // Handle price range change
-  const handlePriceRangeChange = (_: Event, newValue: number | number[]) => {
-    const range = newValue as number[]
-    console.log('Price range changed to:', range)
-    setPriceRange(range)
-    setPage(1) // Reset to first page when filtering
+  const handleSortChange = (event: SelectChangeEvent) => {
+    setSortBy(event.target.value as string)
+    setPage(1)
   }
 
-  // Handle address filter change
   const handleAddressFilterChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setAddressFilter(event.target.value)
-    setPage(1) // Reset to first page when filtering
+    setPage(1)
   }
 
   if (loading) {
     return (
-      <Box 
-        sx={{ 
-          minHeight: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          background: 'var(--gradient-background)',
-        }}
-      >
-        <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress sx={{ color: 'var(--primary)', mb: 2 }} />
-          <Typography sx={{ color: 'var(--foreground-secondary)' }}>
-            Loading room listings...
-          </Typography>
-        </Box>
+      <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <CircularProgress />
       </Box>
     )
   }
 
   if (error) {
     return (
-      <Box 
-        sx={{ 
-          minHeight: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          background: 'var(--gradient-background)',
-        }}
-      >
-        <Box sx={{ textAlign: 'center' }}>
-          <Typography sx={{ color: '#ef4444', mb: 2, fontSize: '1.1rem' }}>
-            {error}
-          </Typography>
-          <Button 
-            onClick={() => window.location.reload()} 
-            sx={{ color: 'var(--primary)' }}
-          >
-            Try Again
-          </Button>
-        </Box>
+      <Box sx={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Typography color="error">{error}</Typography>
       </Box>
     )
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: '100vh',
-        background: 'var(--gradient-background)',
-        color: 'var(--foreground)',
-        p: 4,
-      }}
-    >
-      <Typography
-        variant="h4"
-        sx={{
-          mb: 4,
-          textAlign: 'center',
-          background: 'var(--gradient-primary)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          fontWeight: 700,
-        }}
-      >
+    <Box sx={{ minHeight: '100vh', background: 'var(--gradient-background)', color: 'var(--foreground)', p: 4 }}>
+      <Typography variant="h4" sx={{ mb: 4, textAlign: 'center' }}>
         Explore Rooms
       </Typography>
 
-      {/* Debug Info */}
-      {process.env.NODE_ENV === 'development' && (
-        <Box sx={{ mb: 2, p: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 2 }}>
-          <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)' }}>
-            Debug: Total rooms: {rooms.length}, Filtered: {filteredRooms.length}, 
-            Price range: ${priceRange[0]}-${priceRange[1]}, Min/Max: ${minPrice}-${maxPrice}
-          </Typography>
-          <Typography sx={{ fontSize: '0.7rem', color: 'var(--foreground-secondary)', mt: 1 }}>
-            Filter active: {priceRange[0] !== minPrice || priceRange[1] !== maxPrice ? 'YES' : 'NO'}, 
-            Address filter: "{addressFilter}"
-          </Typography>
-        </Box>
-      )}
-
       <Box sx={{ display: 'flex', gap: 4, maxWidth: 1400, mx: 'auto' }}>
-        {/* Sidebar */}
-        <Box
-          sx={{
-            width: 300,
-            flexShrink: 0,
-            background: 'var(--background-card)',
-            borderRadius: '16px',
-            p: 3,
-            height: 'fit-content',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <Typography variant="h6" sx={{ mb: 3, color: 'var(--foreground)', fontWeight: 600 }}>
-            Filters
-          </Typography>
+        <Box sx={{ width: 300, flexShrink: 0, background: 'var(--background-card)', borderRadius: '16px', p: 3, height: 'fit-content' }}>
+          <Typography variant="h6" sx={{ mb: 3 }}>Filters & Sort</Typography>
 
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontWeight: 500 }}>
-                Price Range: ${priceRange[0].toLocaleString()} - ${priceRange[1].toLocaleString()}
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => {
-                  setPriceRange([minPrice, maxPrice])
-                  setPage(1)
-                }}
-                sx={{
-                  color: 'var(--primary)',
-                  textTransform: 'none',
-                  fontSize: '0.8rem',
-                  minWidth: 'auto',
-                  px: 1,
-                  '&:hover': {
-                    background: 'rgba(0, 122, 255, 0.1)',
-                  }
-                }}
-              >
-                Reset
-              </Button>
-            </Box>
-            <Slider
-              value={priceRange}
-              onChange={handlePriceRangeChange}
-              min={minPrice}
-              max={maxPrice}
-              step={25}
-              valueLabelDisplay="auto"
-              valueLabelFormat={(value) => `$${value.toLocaleString()}`}
-              sx={{
-                color: 'var(--primary)',
-                '& .MuiSlider-thumb': {
-                  backgroundColor: 'var(--primary)',
-                  border: '2px solid var(--background)',
-                  width: 20,
-                  height: 20,
-                  '&:hover': {
-                    boxShadow: '0 0 0 8px rgba(0, 122, 255, 0.16)',
-                  },
-                  '&.Mui-focusVisible': {
-                    boxShadow: '0 0 0 8px rgba(0, 122, 255, 0.16)',
-                  },
-                },
-                '& .MuiSlider-track': {
-                  backgroundColor: 'var(--primary)',
-                  height: 4,
-                },
-                '& .MuiSlider-rail': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  height: 4,
-                },
-                '& .MuiSlider-valueLabel': {
-                  backgroundColor: 'var(--primary)',
-                  color: 'white',
-                  fontSize: '0.75rem',
-                  '&:before': {
-                    borderTopColor: 'var(--primary)',
-                  },
-                },
-              }}
-            />
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
-              <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)' }}>
-                ${minPrice.toLocaleString()}
-              </Typography>
-              <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)' }}>
-                ${maxPrice.toLocaleString()}
-              </Typography>
-            </Box>
-            <Typography sx={{ fontSize: '0.75rem', color: 'var(--foreground-secondary)', mt: 1, fontStyle: 'italic' }}>
-              Showing {filteredRooms.length} of {rooms.length} listings
-            </Typography>
-          </Box>
+          <FormControl fullWidth sx={{ mb: 4 }}>
+            <InputLabel>Sort By</InputLabel>
+            <Select value={sortBy} label="Sort By" onChange={handleSortChange}>
+              <MenuItem value="createdAt_desc">Most Recent</MenuItem>
+              <MenuItem value="price_desc">Price: High to Low</MenuItem>
+              <MenuItem value="price_asc">Price: Low to High</MenuItem>
+            </Select>
+          </FormControl>
 
           <Box>
-            <Typography sx={{ mb: 2, color: 'var(--foreground-secondary)', fontWeight: 500 }}>
-              Location
-            </Typography>
+            <Typography sx={{ mb: 2 }}>Location</Typography>
             <TextField
               fullWidth
               placeholder="Enter location..."
               value={addressFilter}
               onChange={handleAddressFilterChange}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'var(--background-secondary)',
-                  borderRadius: '12px',
-                  '& fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                  },
-                  '&:hover fieldset': {
-                    borderColor: 'var(--primary)',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: 'var(--primary)',
-                  },
-                },
-                '& .MuiInputBase-input': {
-                  color: 'var(--foreground)',
-                },
-                '& .MuiInputBase-input::placeholder': {
-                  color: 'var(--foreground-secondary)',
-                  opacity: 1,
-                },
-              }}
             />
           </Box>
-
-          {profilesLoading && (
-            <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
-              <CircularProgress size={16} sx={{ color: 'var(--primary)' }} />
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
-                Loading profiles...
-              </Typography>
-            </Box>
-          )}
         </Box>
 
-        {/* Main Content */}
         <Box sx={{ flex: 1 }}>
-          {rooms.length === 0 ? (
-            <Box
-              sx={{
-                textAlign: 'center',
-                py: 8,
-                background: 'var(--background-card)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-              }}
-            >
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '1.1rem', mb: 2 }}>
-                No room listings available yet.
-              </Typography>
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
-                Be the first to create a room listing!
-              </Typography>
-              <Button
-                onClick={() => router.push('/create')}
-                sx={{
-                  mt: 2,
-                  background: 'var(--gradient-primary)',
-                  color: 'white',
-                  px: 3,
-                  py: 1,
-                  borderRadius: '12px',
-                  textTransform: 'none',
-                  '&:hover': {
-                    background: 'var(--primary-hover)',
-                  }
-                }}
-              >
-                Create Listing
-              </Button>
-            </Box>
-          ) : filteredRooms.length === 0 ? (
-            <Box
-              sx={{
-                textAlign: 'center',
-                py: 8,
-                background: 'var(--background-card)',
-                borderRadius: '16px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-              }}
-            >
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '1.1rem', mb: 2 }}>
-                No rooms found matching your criteria.
-              </Typography>
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
-                Try adjusting your filters or search terms.
-              </Typography>
+          {paginatedRooms.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography>No rooms found matching your criteria.</Typography>
             </Box>
           ) : (
             <>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-                  gap: 3,
-                  mb: 4,
-                }}
-              >
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: 3, mb: 4 }}>
                 {paginatedRooms.map((room) => (
-                  <Card
-                    key={room.id}
-                    className="dark-card"
-                    sx={{
-                      background: 'var(--background-card)',
-                      borderRadius: '16px',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      overflow: 'hidden',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 'var(--shadow-blue-hover)',
-                        border: '1px solid var(--primary)',
-                      },
-                    }}
-                  >
+                  <Card key={room.id} sx={{ background: 'var(--background-card)', borderRadius: '16px' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', height: 500 }}>
                       <Carousel images={room.images} />
-                      
                       <CardContent sx={{ flexGrow: 1, p: 3 }}>
                         <CardHeader
-                          avatar={
-                            <Avatar
-                              src={room.profile?.profilePicture}
-                              sx={{ 
-                                bgcolor: 'var(--primary)',
-                                width: 40,
-                                height: 40,
-                              }}
-                            >
-                              {room.profile?.name?.[0] || '?'}
-                            </Avatar>
-                          }
-                          title={
-                            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600 }}>
-                              {room.profile?.name || 'Anonymous'}
-                            </Typography>
-                          }
-                          subheader={
-                            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
-                              {room.locationLabel}
-                            </Typography>
-                          }
+                          avatar={<Avatar src={room.profile?.profilePicture} />}
+                          title={room.profile?.name || 'Anonymous'}
+                          subheader={room.locationLabel}
                           sx={{ p: 0, mb: 2 }}
                         />
-
-                        <Typography
-                          variant="h6"
-                          sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}
-                        >
-                          {room.title}
-                        </Typography>
-
-                        <Typography
-                          sx={{
-                            color: 'var(--foreground-secondary)',
-                            mb: 2,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            lineHeight: 1.4,
-                          }}
-                        >
+                        <Typography variant="h6" sx={{ mb: 1 }}>{room.title}</Typography>
+                        <Typography sx={{ mb: 2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                           {room.description}
                         </Typography>
-
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                          {room.price && (
-                            <Typography
-                              sx={{
-                                color: 'var(--primary)',
-                                fontWeight: 700,
-                                fontSize: '1.2rem',
-                              }}
-                            >
-                              ${room.price.toLocaleString()}/month
-                            </Typography>
-                          )}
-                          <Box sx={{ display: 'flex', gap: 2, fontSize: '0.9rem', color: 'var(--foreground-secondary)' }}>
-                            {room.bedrooms && <span>{room.bedrooms} bed</span>}
-                            {room.bathrooms && <span>{room.bathrooms} bath</span>}
-                            {room.sqft && <span>{room.sqft} sqft</span>}
-                          </Box>
+                          {room.price && <Typography>${room.price.toLocaleString()}/month</Typography>}
+                          <Button onClick={() => handleChat(room)} startIcon={<ChatIcon />}>
+                            Contact Owner
+                          </Button>
                         </Box>
-
-                        <Button
-                          onClick={() => handleChat(room)}
-                          startIcon={<ChatIcon />}
-                          className="btn-primary"
-                          fullWidth
-                          sx={{
-                            mt: 'auto',
-                            textTransform: 'none',
-                            borderRadius: '12px',
-                            py: 1.5,
-                            '&.btn-primary': {
-                              background: 'var(--gradient-primary)',
-                              color: 'white',
-                              '&:hover': {
-                                background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
-                                transform: 'translateY(-1px)',
-                              }
-                            }
-                          }}
-                        >
-                          Contact Owner
-                        </Button>
                       </CardContent>
                     </Box>
                   </Card>
                 ))}
               </Box>
-
-              {/* Pagination */}
               {totalPages > 1 && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-                  <Pagination
-                    count={totalPages}
-                    page={page}
-                    onChange={handlePageChange}
-                    sx={{
-                      '& .MuiPaginationItem-root': {
-                        color: 'var(--foreground)',
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
-                        '&:hover': {
-                          backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                          borderColor: 'var(--primary)',
-                        },
-                        '&.Mui-selected': {
-                          backgroundColor: 'var(--primary)',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: 'var(--primary-hover)',
-                          },
-                        },
-                      },
-                    }}
-                  />
+                  <Pagination count={totalPages} page={page} onChange={handlePageChange} />
                 </Box>
               )}
             </>

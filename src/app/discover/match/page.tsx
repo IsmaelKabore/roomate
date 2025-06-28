@@ -197,7 +197,7 @@ export default function MatchesPage() {
       })
       const body = await res.json()
       if (!res.ok) throw new Error(body.error || 'Server error')
-      setMatches(body.matches)
+      setMatches(body.matches || [])
       setActiveStep(3)
     } catch (e: any) {
       console.error(e)
@@ -215,9 +215,31 @@ export default function MatchesPage() {
       alert('You must be logged in to chat.')
       return
     }
+    
+    if (!user.uid) {
+      console.error('User UID is missing:', user)
+      alert('User authentication error. Please try logging in again.')
+      return
+    }
+    
+    if (!match.userId) {
+      console.error('Match userId is missing:', match)
+      alert('Invalid match data. Please try again.')
+      return
+    }
+    
+    console.log('Creating chat room between:', user.uid, 'and', match.userId)
     const roomId = [user.uid, match.userId].sort().join('_')
-    await createRoom(roomId, [user.uid, match.userId])
-    router.push(`/messages/${roomId}`)
+    console.log('Generated room ID:', roomId)
+    
+    try {
+      await createRoom(roomId, [user.uid, match.userId])
+      console.log('Room created successfully, navigating to:', `/messages/${roomId}`)
+      router.push(`/messages/${roomId}`)
+    } catch (error) {
+      console.error('Error creating room:', error)
+      alert('Failed to create chat room. Please try again.')
+    }
   }
 
   const getScoreColor = (score: number) => {
@@ -712,214 +734,277 @@ export default function MatchesPage() {
           </Box>
 
           {/* Results Section */}
-          {matches.length > 0 && (
+          {(matches.length > 0 || (activeStep === 3 && matches.length === 0)) && (
             <Box sx={{ flex: 1 }}>
-              <Box sx={{ mb: 3 }}>
-                <Typography 
-                  variant="h5" 
-                  sx={{ 
-                    color: 'var(--foreground)', 
-                    fontWeight: 700, 
-                    mb: 1 
-                  }}
-                >
-                  Your Matches ({matches.length})
-                </Typography>
-                <Typography sx={{ color: 'var(--foreground-secondary)' }}>
-                  Ranked by AI compatibility score
-                </Typography>
-              </Box>
-
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {matches.map((match, index) => (
-                  <Card
-                    key={match.id}
-                    className="dark-card scale-on-hover"
-                    sx={{
-                      background: 'var(--background-card)',
-                      borderRadius: '20px',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      overflow: 'hidden',
-                      transition: 'all 0.3s ease',
-                      position: 'relative',
-                    }}
-                  >
-                    {/* Match Ranking Badge */}
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        top: 16,
-                        right: 16,
-                        background: getScoreColor(match.combinedScore),
-                        color: 'white',
-                        px: 2,
-                        py: 0.5,
-                        borderRadius: '20px',
-                        fontSize: '0.8rem',
-                        fontWeight: 600,
-                        zIndex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 0.5,
+              {matches.length > 0 ? (
+                <>
+                  <Box sx={{ mb: 3 }}>
+                    <Typography 
+                      variant="h5" 
+                      sx={{ 
+                        color: 'var(--foreground)', 
+                        fontWeight: 700, 
+                        mb: 1 
                       }}
                     >
-                      <StarIcon sx={{ fontSize: 14 }} />
-                      #{index + 1} {getScoreLabel(match.combinedScore)}
-                    </Box>
+                      Your Matches ({matches.length})
+                    </Typography>
+                    <Typography sx={{ color: 'var(--foreground-secondary)' }}>
+                      Ranked by AI compatibility score
+                    </Typography>
+                  </Box>
 
-                    <CardContent sx={{ p: 4 }}>
-                      {/* Header with image and basic info */}
-                      <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
-                        {match.images.length > 0 && (
-                          <Box
-                            component="img"
-                            src={match.images[0]}
-                            alt={match.title}
-                            sx={{
-                              width: 120,
-                              height: 120,
-                              borderRadius: '12px',
-                              objectFit: 'cover',
-                              flexShrink: 0,
-                            }}
-                          />
-                        )}
-                        <Box sx={{ flex: 1 }}>
-                          <Typography
-                            variant="h6"
-                            sx={{ 
-                              color: 'var(--foreground)', 
-                              fontWeight: 700, 
-                              mb: 1,
-                              pr: 10, // Space for badge
-                            }}
-                          >
-                            {match.title || `${match.type === 'room' ? 'Room' : 'Roommate'} Listing`}
-                          </Typography>
-                          <Typography
-                            sx={{
-                              color: 'var(--foreground-secondary)',
-                              mb: 2,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            {match.description}
-                          </Typography>
-                          {match.price && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                              <MoneyIcon sx={{ color: 'var(--primary)', fontSize: 20 }} />
-                              <Typography
-                                sx={{
-                                  color: 'var(--primary)',
-                                  fontWeight: 700,
-                                  fontSize: '1.2rem',
-                                }}
-                              >
-                                ${match.price.toLocaleString()}/month
-                              </Typography>
-                            </Box>
-                          )}
-                          {match.address && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <LocationIcon sx={{ color: 'var(--foreground-secondary)', fontSize: 18 }} />
-                              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
-                                {match.address.split(',').slice(0, 2).join(', ')}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-
-                      {/* Compatibility Scores */}
-                      <Box sx={{ mb: 3 }}>
-                        <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2 }}>
-                          Compatibility Analysis
-                        </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
-                              Overall
-                            </Typography>
-                            <Typography 
-                              sx={{ 
-                                fontSize: '1.5rem', 
-                                fontWeight: 700, 
-                                color: getScoreColor(match.combinedScore) 
-                              }}
-                            >
-                              {Math.round(match.combinedScore * 100)}%
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
-                              Semantic
-                            </Typography>
-                            <Typography 
-                              sx={{ 
-                                fontSize: '1.2rem', 
-                                fontWeight: 600, 
-                                color: 'var(--foreground)' 
-                              }}
-                            >
-                              {Math.round(match.semanticScore * 100)}%
-                            </Typography>
-                          </Box>
-                          <Box>
-                            <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
-                              Filters
-                            </Typography>
-                            <Typography 
-                              sx={{ 
-                                fontSize: '1.2rem', 
-                                fontWeight: 600, 
-                                color: 'var(--foreground)' 
-                              }}
-                            >
-                              {Math.round(match.structuredScore * 100)}%
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
-
-                      {/* Explanation */}
-                      <Box sx={{ mb: 3 }}>
-                        <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}>
-                          Why this is a good match:
-                        </Typography>
-                        <Typography sx={{ color: 'var(--foreground-secondary)', lineHeight: 1.6 }}>
-                          {match.explanation}
-                        </Typography>
-                      </Box>
-
-                      {/* Action Button */}
-                      <Button
-                        onClick={() => handleChat(match)}
-                        startIcon={<ChatIcon />}
-                        fullWidth
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {matches.map((match, index) => (
+                      <Card
+                        key={match.id}
+                        className="dark-card scale-on-hover"
                         sx={{
-                          background: 'var(--gradient-primary)',
-                          color: 'white',
-                          py: 1.5,
-                          borderRadius: '12px',
-                          textTransform: 'none',
-                          fontWeight: 600,
-                          '&:hover': {
-                            background: 'var(--primary-hover)',
-                            transform: 'translateY(-1px)',
-                          },
-                          transition: 'all 0.2s ease',
+                          background: 'var(--background-card)',
+                          borderRadius: '20px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          overflow: 'hidden',
+                          transition: 'all 0.3s ease',
+                          position: 'relative',
                         }}
                       >
-                        Start Conversation
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Box>
+                        {/* Match Ranking Badge */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 16,
+                            right: 16,
+                            background: getScoreColor(match.combinedScore),
+                            color: 'white',
+                            px: 2,
+                            py: 0.5,
+                            borderRadius: '20px',
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            zIndex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.5,
+                          }}
+                        >
+                          <StarIcon sx={{ fontSize: 14 }} />
+                          #{index + 1} {getScoreLabel(match.combinedScore)}
+                        </Box>
+
+                        <CardContent sx={{ p: 4 }}>
+                          {/* Header with image and basic info */}
+                          <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+                            {match.images.length > 0 && (
+                              <Box
+                                component="img"
+                                src={match.images[0]}
+                                alt={match.title}
+                                sx={{
+                                  width: 120,
+                                  height: 120,
+                                  borderRadius: '12px',
+                                  objectFit: 'cover',
+                                  flexShrink: 0,
+                                }}
+                              />
+                            )}
+                            <Box sx={{ flex: 1 }}>
+                              <Typography
+                                variant="h6"
+                                sx={{ 
+                                  color: 'var(--foreground)', 
+                                  fontWeight: 700, 
+                                  mb: 1,
+                                  pr: 10, // Space for badge
+                                }}
+                              >
+                                {match.title || `${match.type === 'room' ? 'Room' : 'Roommate'} Listing`}
+                              </Typography>
+                              <Typography
+                                sx={{
+                                  color: 'var(--foreground-secondary)',
+                                  mb: 2,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  lineHeight: 1.5,
+                                }}
+                              >
+                                {match.description}
+                              </Typography>
+                              {match.price && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                  <MoneyIcon sx={{ color: 'var(--primary)', fontSize: 20 }} />
+                                  <Typography
+                                    sx={{
+                                      color: 'var(--primary)',
+                                      fontWeight: 700,
+                                      fontSize: '1.2rem',
+                                    }}
+                                  >
+                                    ${match.price.toLocaleString()}/month
+                                  </Typography>
+                                </Box>
+                              )}
+                              {match.address && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <LocationIcon sx={{ color: 'var(--foreground-secondary)', fontSize: 18 }} />
+                                  <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                                    {match.address.split(',').slice(0, 2).join(', ')}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          </Box>
+
+                          {/* Compatibility Scores */}
+                          <Box sx={{ mb: 3 }}>
+                            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2 }}>
+                              Compatibility Analysis
+                            </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+                              <Box>
+                                <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
+                                  Overall
+                                </Typography>
+                                <Typography 
+                                  sx={{ 
+                                    fontSize: '1.5rem', 
+                                    fontWeight: 700, 
+                                    color: getScoreColor(match.combinedScore) 
+                                  }}
+                                >
+                                  {Math.round(match.combinedScore * 100)}%
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
+                                  Semantic
+                                </Typography>
+                                <Typography 
+                                  sx={{ 
+                                    fontSize: '1.2rem', 
+                                    fontWeight: 600, 
+                                    color: 'var(--foreground)' 
+                                  }}
+                                >
+                                  {Math.round(match.semanticScore * 100)}%
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
+                                  Filters
+                                </Typography>
+                                <Typography 
+                                  sx={{ 
+                                    fontSize: '1.2rem', 
+                                    fontWeight: 600, 
+                                    color: 'var(--foreground)' 
+                                  }}
+                                >
+                                  {Math.round(match.structuredScore * 100)}%
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Box>
+
+                          {/* Explanation */}
+                          <Box sx={{ mb: 3 }}>
+                            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}>
+                              Why this is a good match:
+                            </Typography>
+                            <Typography sx={{ color: 'var(--foreground-secondary)', lineHeight: 1.6 }}>
+                              {match.explanation}
+                            </Typography>
+                          </Box>
+
+                          {/* Action Button */}
+                          <Button
+                            onClick={() => handleChat(match)}
+                            startIcon={<ChatIcon />}
+                            fullWidth
+                            sx={{
+                              background: 'var(--gradient-primary)',
+                              color: 'white',
+                              py: 1.5,
+                              borderRadius: '12px',
+                              textTransform: 'none',
+                              fontWeight: 600,
+                              '&:hover': {
+                                background: 'var(--primary-hover)',
+                                transform: 'translateY(-1px)',
+                              },
+                              transition: 'all 0.2s ease',
+                            }}
+                          >
+                            Start Conversation
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </Box>
+                </>
+              ) : (
+                <Card
+                  className="dark-card"
+                  sx={{
+                    background: 'var(--background-card)',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    p: 4,
+                    textAlign: 'center',
+                  }}
+                >
+                  <Typography 
+                    variant="h5" 
+                    sx={{ 
+                      color: 'var(--foreground)', 
+                      fontWeight: 700, 
+                      mb: 2 
+                    }}
+                  >
+                    No Matches Found
+                  </Typography>
+                  <Typography sx={{ color: 'var(--foreground-secondary)', mb: 3, lineHeight: 1.6 }}>
+                    We couldn't find any {searchType === 'room' ? 'rooms' : 'roommates'} that match your current criteria. 
+                    Try adjusting your preferences or expanding your search terms.
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400, mx: 'auto' }}>
+                    <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
+                      💡 Try these suggestions:
+                    </Typography>
+                    <Box component="ul" sx={{ textAlign: 'left', color: 'var(--foreground-secondary)', fontSize: '0.9rem', pl: 2 }}>
+                      <li>Increase your budget range</li>
+                      <li>Be more flexible with location preferences</li>
+                      <li>Try broader search terms in your description</li>
+                      {searchType === 'room' && <li>Consider different bedroom/bathroom counts</li>}
+                      <li>Check back later as new listings are added daily</li>
+                    </Box>
+                    <Button
+                      onClick={() => {
+                        setMatches([])
+                        setActiveStep(0)
+                        setError(null)
+                      }}
+                      sx={{
+                        mt: 2,
+                        background: 'var(--gradient-primary)',
+                        color: 'white',
+                        py: 1.5,
+                        borderRadius: '12px',
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        '&:hover': {
+                          background: 'var(--primary-hover)',
+                        },
+                      }}
+                    >
+                      Try New Search
+                    </Button>
+                  </Box>
+                </Card>
+              )}
             </Box>
           )}
         </Box>

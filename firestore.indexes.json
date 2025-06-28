@@ -18,6 +18,16 @@
           { "fieldPath": "createdAt", "order": "DESCENDING" },
           { "fieldPath": "__name__",  "order": "DESCENDING" }
         ]
+      },
+      {
+        "collectionGroup": "posts",
+        "queryScope": "COLLECTION",
+        "fields": [
+          { "fieldPath": "closed",    "order": "ASCENDING" },
+          { "fieldPath": "type",      "order": "ASCENDING" },
+          { "fieldPath": "createdAt", "order": "DESCENDING" },
+          { "fieldPath": "__name__",  "order": "DESCENDING" }
+        ]
       }
     ],
     "fieldOverrides": []

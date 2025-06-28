@@ -17,6 +17,7 @@ import {
   QueryDocumentSnapshot,
   limit,
   startAfter,
+  Timestamp,
 } from 'firebase/firestore'
 
 /**
@@ -28,7 +29,7 @@ interface RoomDoc {
   typing: Record<string, boolean>
   unreadCounts: Record<string, number>
   participantsMeta: Record<string, { name: string, avatarUrl?: string }>
-  createdAt?: FirebaseFirestore.Timestamp
+  createdAt?: Timestamp
 }
 
 /**
@@ -43,17 +44,28 @@ export interface MessageDoc {
 /**
  * Ensure the room exists and initialize read receipts & typing flags.
  */
-export async function createRoom(roomId: string, participants: string[], participantsMeta: Record<string, { name: string, avatarUrl?: string }>) {
+export async function createRoom(
+  roomId: string, 
+  participants: string[], 
+  participantsMeta?: Record<string, { name: string, avatarUrl?: string }>
+) {
   const roomRef = doc(db, 'messages', roomId)
   const snap = await getDoc(roomRef)
   if (!snap.exists()) {
+    // Provide default participantsMeta if not provided
+    const defaultParticipantsMeta = participantsMeta || participants.reduce((meta, uid) => {
+      meta[uid] = { name: 'User', avatarUrl: undefined }
+      return meta
+    }, {} as Record<string, { name: string, avatarUrl?: string }>)
+
     await setDoc(roomRef, {
       participants,
       lastReads: participants.reduce((m, uid) => ({ ...m, [uid]: 0 }), {}),
       typing: participants.reduce((m, uid) => ({ ...m, [uid]: false }), {}),
       unreadCounts: participants.reduce((m, uid) => ({ ...m, [uid]: 0 }), {}),
-      participantsMeta,
-    } as RoomDoc)
+      participantsMeta: defaultParticipantsMeta,
+      createdAt: Timestamp.now(),
+    })
   }
 }
 

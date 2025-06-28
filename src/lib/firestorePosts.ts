@@ -312,15 +312,36 @@ export async function getPostsByUser(userId: string): Promise<
  */
 export async function getRoomPosts(): Promise<RoomPost[]> {
   const postsRef = collection(db, 'posts')
-  const q = query(
-    postsRef,
-    where('type', '==', 'room'),
-    where('closed', '==', false),
-    orderBy('createdAt', 'desc')
-  )
-  const snapshot = await getDocs(q)
+  
+  let snapshot
+  try {
+    // Try with closed filter first
+    const q = query(
+      postsRef,
+      where('type', '==', 'room'),
+      where('closed', '==', false),
+      orderBy('createdAt', 'desc')
+    )
+    snapshot = await getDocs(q)
+  } catch (error: any) {
+    console.warn('Composite index not available, falling back to basic query:', error.message)
+    // Fallback query without closed filter
+    const fallbackQ = query(
+      postsRef,
+      where('type', '==', 'room'),
+      orderBy('createdAt', 'desc')
+    )
+    snapshot = await getDocs(fallbackQ)
+  }
+
   return snapshot.docs.map((docSnap: QueryDocumentSnapshot<DocumentData>) => {
     const data = docSnap.data()
+    
+    // Filter out closed posts manually if we used fallback query
+    if (data.closed === true) {
+      return null
+    }
+    
     const roomData: RoomPostData = {
       userId: data.userId,
       title: data.title,
@@ -345,7 +366,7 @@ export async function getRoomPosts(): Promise<RoomPost[]> {
       createdAt: roomData.createdAt,
       embedding: roomData.embedding,
     }
-  })
+  }).filter(Boolean) as RoomPost[]
 }
 
 /**
@@ -354,16 +375,38 @@ export async function getRoomPosts(): Promise<RoomPost[]> {
  */
 export async function getFeaturedRoomPosts(maxCount: number = 3): Promise<RoomPost[]> {
   const postsRef = collection(db, 'posts')
-  const q = query(
-    postsRef,
-    where('type', '==', 'room'),
-    where('closed', '==', false),
-    orderBy('createdAt', 'desc'),
-    limit(maxCount)
-  )
-  const snapshot = await getDocs(q)
+  
+  let snapshot
+  try {
+    // Try with closed filter first
+    const q = query(
+      postsRef,
+      where('type', '==', 'room'),
+      where('closed', '==', false),
+      orderBy('createdAt', 'desc'),
+      limit(maxCount)
+    )
+    snapshot = await getDocs(q)
+  } catch (error: any) {
+    console.warn('Composite index not available, falling back to basic query:', error.message)
+    // Fallback query without closed filter but with higher limit to account for filtering
+    const fallbackQ = query(
+      postsRef,
+      where('type', '==', 'room'),
+      orderBy('createdAt', 'desc'),
+      limit(maxCount * 2) // Get more to account for manual filtering
+    )
+    snapshot = await getDocs(fallbackQ)
+  }
+
   return snapshot.docs.map((docSnap: QueryDocumentSnapshot<DocumentData>) => {
     const data = docSnap.data()
+    
+    // Filter out closed posts manually if we used fallback query
+    if (data.closed === true) {
+      return null
+    }
+    
     const roomData: RoomPostData = {
       userId: data.userId,
       title: data.title,
@@ -388,7 +431,7 @@ export async function getFeaturedRoomPosts(maxCount: number = 3): Promise<RoomPo
       createdAt: roomData.createdAt,
       embedding: roomData.embedding,
     }
-  })
+  }).filter(Boolean).slice(0, maxCount) as RoomPost[]
 }
 
 /**
@@ -397,15 +440,36 @@ export async function getFeaturedRoomPosts(maxCount: number = 3): Promise<RoomPo
  */
 export async function getRoommatePosts(): Promise<RoommatePost[]> {
   const postsRef = collection(db, 'posts')
-  const q = query(
-    postsRef,
-    where('type', '==', 'roommate'),
-    where('closed', '==', false),
-    orderBy('createdAt', 'desc')
-  )
-  const snapshot = await getDocs(q)
+  
+  let snapshot
+  try {
+    // Try with closed filter first
+    const q = query(
+      postsRef,
+      where('type', '==', 'roommate'),
+      where('closed', '==', false),
+      orderBy('createdAt', 'desc')
+    )
+    snapshot = await getDocs(q)
+  } catch (error: any) {
+    console.warn('Composite index not available, falling back to basic query:', error.message)
+    // Fallback query without closed filter
+    const fallbackQ = query(
+      postsRef,
+      where('type', '==', 'roommate'),
+      orderBy('createdAt', 'desc')
+    )
+    snapshot = await getDocs(fallbackQ)
+  }
+
   return snapshot.docs.map((docSnap: QueryDocumentSnapshot<DocumentData>) => {
     const data = docSnap.data()
+    
+    // Filter out closed posts manually if we used fallback query
+    if (data.closed === true) {
+      return null
+    }
+    
     const mateData: RoommatePostData = {
       userId: data.userId,
       title: data.title,
@@ -426,5 +490,5 @@ export async function getRoommatePosts(): Promise<RoommatePost[]> {
       createdAt: mateData.createdAt,
       embedding: mateData.embedding,
     }
-  })
+  }).filter(Boolean) as RoommatePost[]
 }
