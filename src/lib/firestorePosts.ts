@@ -252,14 +252,36 @@ export async function getPostsByUser(userId: string): Promise<
   }[]
 > {
   const postsRef = collection(db, 'posts')
-  const q = query(
-    postsRef,
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
-  )
-  const snapshot = await getDocs(q)
+  
+  let snapshot
+  try {
+    // Try with closed filter first
+    const q = query(
+      postsRef,
+      where('userId', '==', userId),
+      where('closed', '==', false),
+      orderBy('createdAt', 'desc')
+    )
+    snapshot = await getDocs(q)
+  } catch (error: any) {
+    console.warn('Composite index not available, falling back to basic query:', error.message)
+    // Fallback query without closed filter
+    const fallbackQ = query(
+      postsRef,
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    )
+    snapshot = await getDocs(fallbackQ)
+  }
+
   return snapshot.docs.map((docSnap: QueryDocumentSnapshot<DocumentData>) => {
     const data = docSnap.data()
+    
+    // Filter out closed posts manually if we used fallback query
+    if (data.closed === true) {
+      return null
+    }
+    
     const base: BasePostData = {
       userId: data.userId,
       title: data.title,
@@ -303,7 +325,19 @@ export async function getPostsByUser(userId: string): Promise<
         embedding: mateData.embedding,
       }
     }
-  })
+  }).filter(Boolean) as {
+    id: string
+    userId: string
+    title: string
+    description: string
+    price?: number
+    address?: string
+    images: string[]
+    keywords: string[]
+    type: 'room' | 'roommate'
+    createdAt: Timestamp
+    embedding: number[]
+  }[]
 }
 
 /**

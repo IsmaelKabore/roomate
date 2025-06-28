@@ -39,6 +39,8 @@ type FormValues = {
   bedrooms?: number
   bathrooms?: number
   furnished?: string
+  createBothPosts?: boolean
+  roommateDescription?: string
 }
 
 interface CreatePostPayload {
@@ -77,10 +79,13 @@ export default function CreatePostPage() {
       bedrooms: 1,
       bathrooms: 1,
       furnished: "false",
+      createBothPosts: false,
+      roommateDescription: '',
     },
   })
   const selectedType = watch('type')
   const currentDescription = watch('description')
+  const createBothPosts = watch('createBothPosts')
 
   // Google Maps Autocomplete
   const { isLoaded, loadError } = useJsApiLoader({
@@ -214,6 +219,7 @@ export default function CreatePostPage() {
     console.log('Payload being sent:', payload)
 
     try {
+      // Create the main post
       const res = await fetch('/api/posts/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -230,7 +236,40 @@ export default function CreatePostPage() {
       if (!res.ok) {
         throw new Error(body.error || 'Failed to create post')
       }
-      // Optionally use body.id
+
+      // If creating both posts and this is a room listing, also create a roommate post
+      if (selectedType === 'room' && data.createBothPosts && data.roommateDescription) {
+        const roommatePayload: CreatePostPayload = {
+          title: '', // Roommate posts don't have titles
+          description: data.roommateDescription,
+          address: '', // Roommate posts don't have addresses
+          images: imageUrls, // Use the same images
+          userId: user.uid,
+          type: 'roommate',
+          keywords: keywordsArray, // Use the same keywords
+        }
+
+        console.log('Creating roommate post:', roommatePayload)
+
+        const roommateRes = await fetch('/api/posts/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(roommatePayload),
+        })
+        const roommateText = await roommateRes.text()
+        let roommateBody
+        try {
+          roommateBody = JSON.parse(roommateText)
+        } catch (e) {
+          console.error('Non-JSON response for roommate post:', roommateText)
+          throw new Error('Server error: invalid response format for roommate post')
+        }
+        if (!roommateRes.ok) {
+          throw new Error(roommateBody.error || 'Failed to create roommate post')
+        }
+      }
+
+      // Reset form
       reset({
         type: 'room',
         title: '',
@@ -241,9 +280,17 @@ export default function CreatePostPage() {
         bedrooms: 1,
         bathrooms: 1,
         furnished: "false",
+        createBothPosts: false,
+        roommateDescription: '',
       })
       setImageFiles([])
       setImagePreviews([])
+      
+      // Show success message
+      if (selectedType === 'room' && data.createBothPosts) {
+        alert('Both room and roommate listings created successfully!')
+      }
+      
       router.push(selectedType === 'room' ? '/discover/rooms' : '/discover/roommates')
     } catch (err: any) {
       console.error('Error creating post:', err)
@@ -815,6 +862,88 @@ export default function CreatePostPage() {
                   </Autocomplete>
                 )}
               />
+            </Box>
+          )}
+
+          {/* Create Both Posts Option (only if room) */}
+          {selectedType === 'room' && (
+            <Box sx={{ mb: 4 }}>
+              <Box
+                sx={{
+                  p: 3,
+                  background: 'var(--background-secondary)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Controller
+                    name="createBothPosts"
+                    control={control}
+                    render={({ field: { onChange, value } }) => (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <input
+                          type="checkbox"
+                          checked={value || false}
+                          onChange={(e) => onChange(e.target.checked)}
+                          style={{
+                            width: '18px',
+                            height: '18px',
+                            accentColor: 'var(--primary)',
+                          }}
+                        />
+                        <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, fontSize: '1.1rem' }}>
+                          Also create a roommate listing
+                        </Typography>
+                      </Box>
+                    )}
+                  />
+                </Box>
+                <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.95rem', mb: 3 }}>
+                  Since you have a room available, you're also looking for a roommate! This will create both a room listing and a roommate request with the same photos.
+                </Typography>
+
+                {/* Roommate Description (only if checkbox is checked) */}
+                {createBothPosts && (
+                  <Box>
+                    <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1rem' }}>
+                      Describe the roommate you're looking for
+                    </Typography>
+                    <TextField
+                      placeholder="e.g., Looking for a clean, respectful roommate who enjoys a quiet environment. Prefer someone who works/studies during the day..."
+                      fullWidth
+                      multiline
+                      rows={3}
+                      {...register('roommateDescription', { 
+                        required: createBothPosts ? 'Please describe the roommate you\'re looking for' : false 
+                      })}
+                      error={!!errors.roommateDescription}
+                      helperText={errors.roommateDescription?.message}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          background: 'var(--background)',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: 'var(--foreground)',
+                          '&:hover': {
+                            border: '1px solid var(--primary)',
+                          },
+                          '&.Mui-focused': {
+                            border: '1px solid var(--primary)',
+                          },
+                        },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          border: 'none',
+                        },
+                        '& textarea::placeholder': {
+                          color: 'var(--foreground-secondary)',
+                          opacity: 1,
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+              </Box>
             </Box>
           )}
 
