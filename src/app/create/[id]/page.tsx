@@ -268,7 +268,14 @@ export default function EditPostPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ postId: post.id, userId: auth.currentUser?.uid }),
       })
-      const body = await res.json()
+      const text = await res.text()
+      let body
+      try {
+        body = JSON.parse(text)
+      } catch (e) {
+        console.error('Non-JSON response:', text)
+        throw new Error('Server error: invalid response format')
+      }
       if (!res.ok) throw new Error(body.error || 'Failed to close listing')
 
       alert('Listing closed successfully.')
