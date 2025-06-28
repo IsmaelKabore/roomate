@@ -339,19 +339,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
             </Typography>
           </Paper>
           <ClientOnly>
-            <Typography
-              variant="caption"
-              sx={{
-                color: 'var(--foreground-secondary)',
-                fontSize: '0.75rem',
-                mt: 0.5,
-                display: 'block',
-                textAlign: isMe ? 'right' : 'left',
-                px: 1,
-              }}
-            >
-              {formatTime(m.timestamp)}
-            </Typography>
+            <></>
           </ClientOnly>
         </Box>
       </div>
@@ -676,20 +664,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                         }
                       />
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
-                        <ClientOnly>
-                          <Typography
-                            variant="caption"
-                            sx={{ 
-                              color: isActive ? 'rgba(255, 255, 255, 0.7)' : 'var(--foreground-secondary)', 
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {it.latestTimestamp > 0
-                              ? formatTime(it.latestTimestamp)
-                              : ''}
-                          </Typography>
-                        </ClientOnly>
+                        <></>
                       </Box>
                     </ListItemButton>
                     {idx < inboxItems.length - 1 && (
@@ -882,7 +857,7 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                   </Typography>
                 </Box>
               ) : (
-                <MessageList messages={messages} MessageRow={MessageRow} />
+                <></>
               )}
               <div ref={bottomRef} />
             </Box>

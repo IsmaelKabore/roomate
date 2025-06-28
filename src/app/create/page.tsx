@@ -36,6 +36,9 @@ type FormValues = {
   price?: number
   address: string
   keywordsInput: string
+  bedrooms?: number
+  bathrooms?: number
+  furnished?: string
 }
 
 interface CreatePostPayload {
@@ -47,6 +50,9 @@ interface CreatePostPayload {
   type: 'room' | 'roommate'
   price?: number
   keywords: string[]
+  bedrooms?: number
+  bathrooms?: number
+  furnished?: boolean
 }
 
 export default function CreatePostPage() {
@@ -68,6 +74,9 @@ export default function CreatePostPage() {
       price: undefined,
       address: '',
       keywordsInput: '',
+      bedrooms: 1,
+      bathrooms: 1,
+      furnished: "false",
     },
   })
   const selectedType = watch('type')
@@ -76,7 +85,7 @@ export default function CreatePostPage() {
   // Google Maps Autocomplete
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: MAP_LIBRARIES,
+    libraries: MAP_LIBRARIES as any,
   })
   const autoRef = useRef<google.maps.places.Autocomplete | null>(null)
   const onLoad = (ac: google.maps.places.Autocomplete) => {
@@ -195,9 +204,14 @@ export default function CreatePostPage() {
       type: selectedType,
       keywords: keywordsArray,
     }
-    if (selectedType === 'room' && data.price !== undefined) {
-      payload.price = data.price
+    if (selectedType === 'room') {
+      payload.price = Number(data.price) || 0
+      payload.bedrooms = Number(data.bedrooms) || 1
+      payload.bathrooms = Number(data.bathrooms) || 1
+      payload.furnished = data.furnished === 'true'
     }
+
+    console.log('Payload being sent:', payload)
 
     try {
       const res = await fetch('/api/posts/create', {
@@ -224,6 +238,9 @@ export default function CreatePostPage() {
         price: undefined,
         address: '',
         keywordsInput: '',
+        bedrooms: 1,
+        bathrooms: 1,
+        furnished: "false",
       })
       setImageFiles([])
       setImagePreviews([])
@@ -631,6 +648,122 @@ export default function CreatePostPage() {
                     opacity: 1,
                   },
                 }}
+              />
+            </Box>
+          )}
+
+          {/* Bedrooms (only if room) */}
+          {selectedType === 'room' && (
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+                Number of Bedrooms
+              </Typography>
+              <TextField
+                type="number"
+                fullWidth
+                {...register('bedrooms', {
+                  required: 'Number of bedrooms is required',
+                  min: { value: 1, message: 'Must be at least 1 bedroom' },
+                })}
+                error={!!errors.bedrooms}
+                helperText={errors.bedrooms?.message}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    background: 'var(--background-secondary)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: 'var(--foreground)',
+                    '&:hover': {
+                      border: '1px solid var(--primary)',
+                    },
+                    '&.Mui-focused': {
+                      border: '1px solid var(--primary)',
+                    },
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none',
+                  },
+                }}
+              />
+            </Box>
+          )}
+
+          {/* Bathrooms (only if room) */}
+          {selectedType === 'room' && (
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+                Number of Bathrooms
+              </Typography>
+              <TextField
+                type="number"
+                fullWidth
+                {...register('bathrooms', {
+                  required: 'Number of bathrooms is required',
+                  min: { value: 1, message: 'Must be at least 1 bathroom' },
+                })}
+                error={!!errors.bathrooms}
+                helperText={errors.bathrooms?.message}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    background: 'var(--background-secondary)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: 'var(--foreground)',
+                    '&:hover': {
+                      border: '1px solid var(--primary)',
+                    },
+                    '&.Mui-focused': {
+                      border: '1px solid var(--primary)',
+                    },
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none',
+                  },
+                }}
+              />
+            </Box>
+          )}
+
+          {/* Furnished (only if room) */}
+          {selectedType === 'room' && (
+            <Box sx={{ mb: 4 }}>
+              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2, fontSize: '1.1rem' }}>
+                Furnished
+              </Typography>
+              <Controller
+                name="furnished"
+                control={control}
+                rules={{ required: 'Please specify if furnished' }}
+                render={({ field: { onChange, value } }) => (
+                  <TextField
+                    select
+                    fullWidth
+                    value={value || "false"}
+                    onChange={onChange}
+                    error={!!errors.furnished}
+                    helperText={errors.furnished?.message}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    background: 'var(--background-secondary)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    color: 'var(--foreground)',
+                    '&:hover': {
+                      border: '1px solid var(--primary)',
+                    },
+                    '&.Mui-focused': {
+                      border: '1px solid var(--primary)',
+                    },
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    border: 'none',
+                  },
+                }}
+                                >
+                    <MenuItem value="true">Yes - Furnished</MenuItem>
+                    <MenuItem value="false">No - Unfurnished</MenuItem>
+                  </TextField>
+                )}
               />
             </Box>
           )}

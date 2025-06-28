@@ -9,12 +9,9 @@ export default function MapSection() {
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  // Get API key from environment variable
-  const apiKey = 'AIzaSyAHy9t-zxAHjbwgGlmWWljARFP5Ua7Q_Ec';
-
   // Load Google Maps JS only when this component is rendered
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey || '',
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
     libraries: MAP_LIBRARIES as Libraries,
   });
 
@@ -28,7 +25,7 @@ export default function MapSection() {
   };
 
   // Check for missing API key
-  if (!apiKey) {
+  if (!GOOGLE_MAPS_API_KEY) {
     return (
       <section className="py-16 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="mx-auto max-w-7xl px-6 lg:px-8 text-center">
