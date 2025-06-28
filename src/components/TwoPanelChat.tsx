@@ -362,7 +362,15 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
     if (!currentUser || isLoading) return
 
     loadRooms()
-  }, [currentUser, isLoading, loadRooms])
+    
+    // If initialRoomId is provided, set it as active and ensure it exists
+    if (initialRoomId) {
+      setActiveRoomId(initialRoomId)
+      ensureRoomExists(initialRoomId, currentUser.uid).catch((error) => {
+        console.error('Error ensuring initial room exists:', error)
+      })
+    }
+  }, [currentUser, isLoading, loadRooms, initialRoomId])
 
   // ══════════════════════════════════════════════════════════════════
   // 2) Handle active room subscription
@@ -411,12 +419,31 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
     initRoomAndSubscribe()
   }, [currentUser, activeRoomId, debouncedFetchSmartReplies])
 
+  // Helper function to ensure room exists before sending messages
+  const ensureRoomExists = async (roomId: string, currentUserId: string) => {
+    try {
+      // Extract participant IDs from room ID (format: userId1_userId2)
+      const participants = roomId.split('_')
+      if (participants.length !== 2) {
+        throw new Error('Invalid room ID format')
+      }
+      
+      // Create room (metadata will be fetched separately due to security rule constraints)
+      await createRoom(roomId, participants)
+    } catch (error) {
+      console.error('Error ensuring room exists:', error)
+      throw error
+    }
+  }
+
   // ══════════════════════════════════════════════════════════════════
   // 2) Handle sending a message
   // ══════════════════════════════════════════════════════════════════
   const handleSend = async () => {
     if (!newMsgText.trim() || !activeRoomId || !currentUser) return
     try {
+      // Ensure the room exists before sending a message
+      await ensureRoomExists(activeRoomId, currentUser.uid)
       await sendMessage(activeRoomId, currentUser.uid, newMsgText.trim())
       setNewMsgText('')
       setSmartSuggestions([]) // Clear suggestions after sending
@@ -857,7 +884,52 @@ export default function TwoPanelChat({ initialRoomId }: TwoPanelChatProps) {
                   </Typography>
                 </Box>
               ) : (
-                <></>
+                messages.map((m, idx) => {
+                  const isMe = currentUser ? m.senderId === currentUser.uid : false
+                  return (
+                    <Box
+                      key={idx}
+                      sx={{
+                        display: 'flex',
+                        justifyContent: isMe ? 'flex-end' : 'flex-start',
+                        mb: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          maxWidth: '75%',
+                        }}
+                      >
+                        <Paper
+                          elevation={0}
+                          sx={{
+                            p: 2,
+                            background: isMe
+                              ? 'var(--gradient-primary)'
+                              : 'var(--background-card)',
+                            color: isMe ? 'white' : 'var(--foreground)',
+                            borderRadius: '18px',
+                            borderTopLeftRadius: isMe ? '18px' : '6px',
+                            borderTopRightRadius: isMe ? '6px' : '18px',
+                            border: isMe ? 'none' : '1px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: isMe ? '0 4px 12px rgba(0, 122, 255, 0.3)' : 'none',
+                          }}
+                        >
+                          <Typography
+                            variant="body1"
+                            sx={{ 
+                              lineHeight: 1.5, 
+                              wordBreak: 'break-word',
+                              fontSize: '0.95rem',
+                            }}
+                          >
+                            {m.text}
+                          </Typography>
+                        </Paper>
+                      </Box>
+                    </Box>
+                  )
+                })
               )}
               <div ref={bottomRef} />
             </Box>
