@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { GoogleMap, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, useJsApiLoader, Libraries } from '@react-google-maps/api';
 import { CircularProgress, Typography, Box, Button } from '@mui/material';
 import { GOOGLE_MAPS_API_KEY, MAP_LIBRARIES } from '@/lib/mapsConfig';
 
@@ -10,12 +10,12 @@ export default function MapSection() {
   const [mapError, setMapError] = useState<string | null>(null);
 
   // Get API key from environment variable
-  const apiKey = GOOGLE_MAPS_API_KEY;
+  const apiKey = 'AIzaSyAHy9t-zxAHjbwgGlmWWljARFP5Ua7Q_Ec';
 
   // Load Google Maps JS only when this component is rendered
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: apiKey || '',
-    libraries: MAP_LIBRARIES,
+    libraries: MAP_LIBRARIES as Libraries,
   });
 
   const handleMapError = () => {

@@ -19,7 +19,7 @@ export default function Hero() {
         className="relative z-10"
       >
         <Image
-          src="/logo_sharespace.png"
+          src="/topleft.jpeg"
           alt="ShareSpace Logo"
           width={80}
           height={80}
