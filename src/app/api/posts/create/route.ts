@@ -65,6 +65,7 @@ export async function POST(req: Request) {
       structured: type === 'room'
         ? { bedrooms, bathrooms, furnished }
         : { bedrooms: null, bathrooms: null, furnished: null },
+      closed: false,
       createdAt: admin.firestore.Timestamp.now(),
       updatedAt: admin.firestore.Timestamp.now(),
     }

@@ -315,6 +315,7 @@ export async function getRoomPosts(): Promise<RoomPost[]> {
   const q = query(
     postsRef,
     where('type', '==', 'room'),
+    where('closed', '==', false),
     orderBy('createdAt', 'desc')
   )
   const snapshot = await getDocs(q)
@@ -356,6 +357,7 @@ export async function getFeaturedRoomPosts(maxCount: number = 3): Promise<RoomPo
   const q = query(
     postsRef,
     where('type', '==', 'room'),
+    where('closed', '==', false),
     orderBy('createdAt', 'desc'),
     limit(maxCount)
   )
@@ -398,6 +400,7 @@ export async function getRoommatePosts(): Promise<RoommatePost[]> {
   const q = query(
     postsRef,
     where('type', '==', 'roommate'),
+    where('closed', '==', false),
     orderBy('createdAt', 'desc')
   )
   const snapshot = await getDocs(q)

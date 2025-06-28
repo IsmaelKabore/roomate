@@ -25,9 +25,9 @@ interface UpdatePostPayload {
   images: string[]
   type: 'room' | 'roommate'
   keywords: string[]
-  bedrooms: number
-  bathrooms: number
-  furnished: boolean
+  bedrooms?: number
+  bathrooms?: number
+  furnished?: boolean
 }
 
 export async function POST(request: Request) {
@@ -56,6 +56,9 @@ export async function POST(request: Request) {
     // Extract keywords if not provided or empty
     let finalKeywords = Array.isArray(body.keywords) && body.keywords.length > 0 ? body.keywords : await extractKeywordsFromDescription(body.description || '')
 
+    // Preserve previous structured values if not provided in the update payload
+    const prevStructured: any = snap.data()?.structured || {}
+
     await ref.update({
       title: body.title.trim(),
       description: body.description.trim(),
@@ -65,9 +68,9 @@ export async function POST(request: Request) {
       type: body.type,
       keywords: finalKeywords,
       structured: {
-        bedrooms: body.bedrooms,
-        bathrooms: body.bathrooms,
-        furnished: body.furnished,
+        bedrooms: body.bedrooms ?? prevStructured.bedrooms ?? null,
+        bathrooms: body.bathrooms ?? prevStructured.bathrooms ?? null,
+        furnished: typeof body.furnished === 'boolean' ? body.furnished : (prevStructured.furnished ?? null),
       },
       embedding,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),

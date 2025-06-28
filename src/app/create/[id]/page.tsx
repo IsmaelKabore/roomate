@@ -52,8 +52,6 @@ interface UpdatePostPayload {
   keywords: string[]
 }
 
-const LIBRARIES = ['places'] as const
-
 export default function EditPostPage() {
   const { id } = useParams() as { id?: string }
   const router = useRouter()
@@ -80,7 +78,7 @@ export default function EditPostPage() {
   // Google Maps Autocomplete
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: MAP_LIBRARIES,
+    libraries: MAP_LIBRARIES as any,
   })
   const autoRef = useRef<google.maps.places.Autocomplete | null>(null)
   const onLoadAutocomplete = (ac: google.maps.places.Autocomplete) => {
@@ -111,8 +109,28 @@ export default function EditPostPage() {
   }
 
   const removeImageAt = (index: number) => {
-    setImageFiles((prev) => prev.filter((_, i) => i !== index))
+    // Remove from previews first
     setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+
+    // 1) If the image is part of existing post images, remove it there too
+    setPost((prev) => {
+      if (!prev) return prev
+      if (index < prev.images.length) {
+        const newImgs = prev.images.filter((_, i) => i !== index)
+        return { ...prev, images: newImgs }
+      }
+      return prev
+    })
+
+    // 2) If it is one of the newly-selected files, adjust file arrays
+    setImageFiles((prev) => {
+      const existingCount = post?.images.length ?? 0
+      if (index >= existingCount) {
+        const newIdx = index - existingCount
+        return prev.filter((_, i) => i !== newIdx)
+      }
+      return prev
+    })
   }
 
   // 1) Fetch the post once on mount
@@ -231,6 +249,34 @@ export default function EditPostPage() {
     } catch (e: any) {
       console.error('Error updating post:', e)
       alert(e.message || 'Failed to update post.')
+      setLoading(false)
+    }
+  }
+
+  // ————— Close Listing —————
+  const handleCloseListing = async () => {
+    if (!post) return
+    const confirmClose = window.confirm(
+      'Close this listing? It will no longer appear in discovery results.'
+    )
+    if (!confirmClose) return
+
+    setLoading(true)
+    try {
+      const res = await fetch('/api/posts/close', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postId: post.id, userId: auth.currentUser?.uid }),
+      })
+      const body = await res.json()
+      if (!res.ok) throw new Error(body.error || 'Failed to close listing')
+
+      alert('Listing closed successfully.')
+      router.push('/my-posts')
+    } catch (e: any) {
+      console.error('Error closing listing:', e)
+      alert(e.message || 'Failed to close listing.')
+    } finally {
       setLoading(false)
     }
   }
@@ -452,6 +498,17 @@ export default function EditPostPage() {
               }}
             >
               {loading ? <CircularProgress size={24} /> : 'Save Changes'}
+            </Button>
+
+            {/* Close Listing */}
+            <Button
+              onClick={handleCloseListing}
+              variant="outlined"
+              color="error"
+              fullWidth
+              sx={{ mt: 2, textTransform: 'none', borderRadius: '12px' }}
+            >
+              Close Listing
             </Button>
           </form>
         )}
