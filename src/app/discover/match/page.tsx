@@ -76,6 +76,17 @@ export default function MatchesPage() {
   const [bathrooms, setBathrooms] = useState(1)
   const [furnished, setFurnished] = useState(false)
 
+  // Track which filters were explicitly set by the user
+  const [explicitFilters, setExplicitFilters] = useState({
+    budgetMin: false,
+    budgetMax: false,
+    location: false,
+    locationRadiusKm: false,
+    bedrooms: false,
+    bathrooms: false,
+    furnished: false,
+  })
+
   // AI Parsed preferences display
   const [aiPreferences, setAiPreferences] = useState<{
     bedrooms: number | null
@@ -181,6 +192,17 @@ export default function MatchesPage() {
       furnished:      aiPrefs.furnished ?? furnished,
     }
 
+    // Track which filters are explicit (AI-parsed or manually set)
+    const finalExplicitFilters = {
+      budgetMin: explicitFilters.budgetMin,
+      budgetMax: aiPrefs.budgetMax !== null || explicitFilters.budgetMax,
+      location: locationStatus === 'granted', // Location is explicit if granted
+      locationRadiusKm: false, // We use a default radius
+      bedrooms: aiPrefs.bedrooms !== null || explicitFilters.bedrooms,
+      bathrooms: explicitFilters.bathrooms,
+      furnished: aiPrefs.furnished !== null || explicitFilters.furnished,
+    }
+
     setActiveStep(2)
 
     // 3) Call your existing matches API
@@ -193,6 +215,7 @@ export default function MatchesPage() {
           searchType,
           description: description.trim(),
           structuredFilters,
+          explicitFilters: finalExplicitFilters,
         }),
       })
       const body = await res.json()
@@ -527,7 +550,10 @@ export default function MatchesPage() {
                     </Typography>
                     <Slider
                       value={budget}
-                      onChange={(_, v) => setBudget(v as [number, number])}
+                      onChange={(_, v) => {
+                        setBudget(v as [number, number])
+                        setExplicitFilters(prev => ({ ...prev, budgetMin: true, budgetMax: true }))
+                      }}
                       min={0}
                       max={5000}
                       step={50}
@@ -563,7 +589,10 @@ export default function MatchesPage() {
                           select
                           label="Bedrooms"
                           value={bedrooms}
-                          onChange={e => setBedrooms(Number(e.target.value))}
+                          onChange={e => {
+                            setBedrooms(Number(e.target.value))
+                            setExplicitFilters(prev => ({ ...prev, bedrooms: true }))
+                          }}
                           sx={{
                             flex: 1,
                             '& .MuiOutlinedInput-root': {
@@ -596,7 +625,10 @@ export default function MatchesPage() {
                           select
                           label="Bathrooms"
                           value={bathrooms}
-                          onChange={e => setBathrooms(Number(e.target.value))}
+                          onChange={e => {
+                            setBathrooms(Number(e.target.value))
+                            setExplicitFilters(prev => ({ ...prev, bathrooms: true }))
+                          }}
                           sx={{
                             flex: 1,
                             '& .MuiOutlinedInput-root': {
@@ -630,7 +662,10 @@ export default function MatchesPage() {
                         control={
                           <Checkbox
                             checked={furnished}
-                            onChange={e => setFurnished(e.target.checked)}
+                            onChange={e => {
+                              setFurnished(e.target.checked)
+                              setExplicitFilters(prev => ({ ...prev, furnished: true }))
+                            }}
                             sx={{
                               color: 'var(--foreground-secondary)',
                               '&.Mui-checked': {

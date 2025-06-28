@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import admin from 'firebase-admin'
 import { extractKeywordsFromDescription } from '@/lib/enhancedMatching'
+import { getOpenAIEmbedding } from '@/lib/openai-embed'
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -51,9 +52,31 @@ export async function POST(req: Request) {
     }
 
     // Extract keywords if not provided or empty
-    let finalKeywords = Array.isArray(keywords) && keywords.length > 0 ? keywords : await extractKeywordsFromDescription(description || '')
+    const finalKeywords = Array.isArray(keywords) && keywords.length > 0 ? keywords : await extractKeywordsFromDescription(description || '')
 
-    const docData: any = {
+    // Generate embedding for semantic matching
+    const combinedText = `${(type === 'room' ? title : '').trim()}\n${description.trim()}\n${(type === 'room' ? address : '').trim()}`
+    const embedding = await getOpenAIEmbedding(combinedText)
+
+    const docData: {
+      title: string;
+      description: string;
+      address: string;
+      images: string[];
+      userId: string;
+      type: 'room' | 'roommate';
+      price: number | null;
+      keywords: string[];
+      embedding: number[];
+      structured: {
+        bedrooms: number | null;
+        bathrooms: number | null;
+        furnished: boolean | null;
+      };
+      closed: boolean;
+      createdAt: admin.firestore.Timestamp;
+      updatedAt: admin.firestore.Timestamp;
+    } = {
       title: type === 'room' ? title.trim() : '',
       description: description.trim(),
       address: type === 'room' ? address.trim() : '',
@@ -62,6 +85,7 @@ export async function POST(req: Request) {
       type,
       price: type === 'room' ? price : null,
       keywords: finalKeywords,
+      embedding, // Add embedding for semantic search
       structured: type === 'room'
         ? { bedrooms, bathrooms, furnished }
         : { bedrooms: null, bathrooms: null, furnished: null },
@@ -70,12 +94,18 @@ export async function POST(req: Request) {
       updatedAt: admin.firestore.Timestamp.now(),
     }
 
+    console.log(`[/api/posts/create] Creating ${type} post with embedding (length: ${embedding.length})`)
+
     const ref = await db.collection('posts').add(docData)
+    
+    console.log(`[/api/posts/create] Successfully created post ${ref.id} with embedding`)
+    
     return NextResponse.json({ id: ref.id })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/posts/create] Error:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     return NextResponse.json(
-      { error: err.message || 'Unknown error' },
+      { error: errorMessage },
       { status: 500 }
     )
   }

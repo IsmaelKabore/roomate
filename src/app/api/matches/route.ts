@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { fetchEnhancedMatchesV2, extractKeywordsFromDescription, fetchMatchesWithFallback } from "@/lib/enhancedMatching";
-import type { StructuredFilters, EnhancedMatch } from "@/lib/types";
+import type { StructuredFilters, EnhancedMatch, EnhancedStructuredFilters } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as {
@@ -11,12 +11,27 @@ export async function POST(req: NextRequest) {
     searchType?: "room" | "roommate";
     description?: string;
     structuredFilters?: StructuredFilters;
+    explicitFilters?: {
+      budgetMin?: boolean;
+      budgetMax?: boolean;
+      location?: boolean;
+      locationRadiusKm?: boolean;
+      bedrooms?: boolean;
+      bathrooms?: boolean;
+      furnished?: boolean;
+    };
   };
-  const { userId, searchType, description, structuredFilters } = body;
+  const { userId, searchType, description, structuredFilters, explicitFilters } = body;
 
   if (!userId || !searchType || !description || !structuredFilters) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
+
+  // Create enhanced filters with explicit filter tracking
+  const enhancedFilters: EnhancedStructuredFilters = {
+    ...structuredFilters,
+    _explicitFilters: explicitFilters || {}
+  };
 
   try {
     console.log(`[/api/matches] Starting search for ${searchType} with user: ${userId}`);
@@ -29,11 +44,11 @@ export async function POST(req: NextRequest) {
 
     // Try enhanced matching with semantic search first
     try {
-      console.log(`[/api/matches] Attempting enhanced matching...`);
+      console.log(`[/api/matches] Attempting enhanced matching with explicit filters:`, explicitFilters);
       matches = await fetchEnhancedMatchesV2(
         description.trim(),
         userKeywords,
-        structuredFilters,
+        enhancedFilters,
         searchType,
         userId,
         10 // Get more initial results for better filtering
@@ -51,7 +66,7 @@ export async function POST(req: NextRequest) {
         matches = await fetchMatchesWithFallback(
           description.trim(),
           userKeywords,
-          structuredFilters,
+          enhancedFilters,
           searchType,
           userId,
           10

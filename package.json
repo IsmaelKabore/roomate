@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "backfill-embeddings": "node scripts/backfill-embeddings.js"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",

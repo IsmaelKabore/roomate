@@ -25,6 +25,20 @@ export interface PostBase {
   updatedAt: Date;
 }
 
+// Enhanced filters that can track which filters are explicitly set
+export interface EnhancedStructuredFilters extends StructuredFilters {
+  // Track which filters are explicitly set by the user (not defaults)
+  _explicitFilters?: {
+    budgetMin?: boolean;
+    budgetMax?: boolean;
+    location?: boolean;
+    locationRadiusKm?: boolean;
+    bedrooms?: boolean;
+    bathrooms?: boolean;
+    furnished?: boolean;
+  };
+}
+
 // What we store on each post in Firestore
 export interface PostWithMeta extends PostBase {
   structured: StructuredFilters;
