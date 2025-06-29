@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { GoogleMap, useJsApiLoader, Libraries } from '@react-google-maps/api';
-import { CircularProgress, Typography, Box, Button } from '@mui/material';
+import { CircularProgress, Typography, Button } from '@mui/material';
 import { GOOGLE_MAPS_API_KEY, MAP_LIBRARIES } from '@/lib/mapsConfig';
 
 export default function MapSection() {
@@ -12,12 +12,8 @@ export default function MapSection() {
   // Load Google Maps JS only when this component is rendered
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: MAP_LIBRARIES as Libraries,
+    libraries: [...MAP_LIBRARIES] as Libraries,
   });
-
-  const handleMapError = () => {
-    setMapError('Failed to load the map. Please try again later.');
-  };
 
   const handleRetry = () => {
     setMapError(null);

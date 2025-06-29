@@ -58,8 +58,9 @@ Description:
     }
 
     return NextResponse.json(parsed);
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[parsePreferences]", err);
-    return NextResponse.json({ error: "Failed to parse preferences" }, { status: 500 });
+    const message = err instanceof Error ? err.message : undefined;
+    return NextResponse.json({ error: message ?? "Failed to parse preferences" }, { status: 500 });
   }
 }

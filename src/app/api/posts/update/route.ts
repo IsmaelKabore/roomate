@@ -53,11 +53,16 @@ export async function POST(request: Request) {
     const combined = [body.title, body.description, body.address].join('\n')
     const embedding = await getOpenAIEmbedding(combined)
 
-    // Extract keywords if not provided or empty
-    let finalKeywords = Array.isArray(body.keywords) && body.keywords.length > 0 ? body.keywords : await extractKeywordsFromDescription(body.description || '')
-
     // Preserve previous structured values if not provided in the update payload
-    const prevStructured: any = snap.data()?.structured || {}
+    const prevStructured = (snap.data()?.structured || {}) as Partial<{
+      bedrooms: number | null;
+      bathrooms: number | null;
+      furnished: boolean | null;
+    }>
+
+    const finalKeywords = Array.isArray(body.keywords) && body.keywords.length > 0
+      ? body.keywords
+      : await extractKeywordsFromDescription(body.description || '')
 
     await ref.update({
       title: body.title.trim(),
@@ -77,10 +82,11 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ success: true })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[/api/posts/update] Error:', err)
+    const message = err instanceof Error ? err.message : 'Internal Server Error'
     return NextResponse.json(
-      { error: err.message || 'Internal Server Error' },
+      { error: message },
       { status: 500 }
     )
   }

@@ -92,11 +92,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ matches: finalMatches });
     
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("[/api/matches] Unexpected error:", err);
+    const message = err instanceof Error ? err.message : undefined;
     return NextResponse.json({ 
       error: "Failed to find matches. Please try again.",
-      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+      details: process.env.NODE_ENV === 'development' ? message : undefined
     }, { status: 500 });
   }
 }

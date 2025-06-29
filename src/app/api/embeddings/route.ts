@@ -20,10 +20,11 @@ export async function POST(request: Request) {
     console.log("↪ embedding length:", Array.isArray(embedding) ? embedding.length : "(not an array)");
 
     return NextResponse.json({ embedding });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal Server Error";
     console.error("[/api/embeddings] error:", err);
     return NextResponse.json(
-      { error: err.message || "Internal Server Error" },
+      { error: message },
       { status: 500 }
     );
   }
