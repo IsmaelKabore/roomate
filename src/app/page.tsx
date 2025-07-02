@@ -22,6 +22,7 @@ const LazyMapSection = dynamic(() => import('./components/MapSection'), {
 export default function HomePage() {
   const [featured, setFeatured] = useState<RoomPost[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [year, setYear] = useState<number | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,6 +43,10 @@ export default function HomePage() {
     return () => {
       isMounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
   }, []);
 
   return (
@@ -66,19 +71,56 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <div className="flex flex-row flex-wrap gap-4 justify-center lg:justify-start">
                 <Link
                   href="/discover"
-                  className="group relative inline-flex items-center gap-3 px-10 py-4 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl text-lg font-bold transition-all duration-300 shadow-xl hover:shadow-blue-500/40 hover:-translate-y-2 overflow-hidden"
+                  className="
+                    group relative inline-flex
+                    items-center gap-3
+                    px-6 sm:px-10     /* reduced horizontal padding on mobile */
+                    py-4
+                    bg-gradient-to-r from-blue-500 to-blue-600
+                    text-white
+                    rounded-2xl
+                    text-base sm:text-lg   /* smaller font on mobile */
+                    font-bold
+                    transition-all duration-300
+                    shadow-xl hover:shadow-blue-500/40 hover:-translate-y-2
+                    overflow-hidden
+                  "
                   prefetch={true}
                 >
                   <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                  <span className="relative z-10 font-semibold tracking-wide text-white">Search</span>
-                  <div className="absolute inset-0 -top-40 bg-gradient-to-b from-white/20 to-transparent w-full h-full transform rotate-12 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                  <span className="relative z-10 font-semibold tracking-wide text-white">
+                    Search
+                  </span>
+                  <div className="
+                    absolute inset-0 -top-40
+                    bg-gradient-to-b from-white/20 to-transparent
+                    w-full h-full
+                    transform rotate-12 translate-x-[-100%]
+                    group-hover:translate-x-[100%]
+                    transition-transform duration-700
+                  "></div>
                 </Link>
+
                 <Link
                   href="/auth/signup"
-                  className="group relative inline-flex items-center gap-3 px-10 py-4 bg-white border-2 border-gray-200 text-gray-900 rounded-2xl text-lg font-semibold hover:bg-gray-50 transition-all duration-300 shadow-lg hover:shadow-gray-300/30"
+                  className="
+                    group relative inline-flex
+                    items-center gap-3
+                    px-6 sm:px-10
+                    py-4
+                    bg-white
+                    border-2 border-gray-200
+                    text-gray-900
+                    rounded-2xl
+                    text-base sm:text-lg
+                    font-semibold
+                    hover:bg-gray-50
+                    transition-all duration-300
+                    shadow-lg hover:shadow-gray-300/30
+                  "
                   prefetch={true}
                 >
                   <span className="text-2xl group-hover:scale-110 transition-transform duration-300"></span>
@@ -273,59 +315,58 @@ export default function HomePage() {
       </section>
 
       {/* ===========================================================
-           4) ABOUT SECTION – Light Theme
+     4) ABOUT SECTION – Light Theme (boxed layout)
       =========================================================== */}
       <section className="py-16 px-6 lg:px-8 bg-white">
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-12 lg:flex-row lg:gap-24">
-          <div className="relative w-full max-w-md flex-shrink-0 h-80">
+        <div className="mx-auto max-w-7xl flex flex-col items-center gap-12 lg:flex-row lg:gap-24">
+          
+          {/* ─── Image Box ─── */}
+          <div className="w-full max-w-md h-80 relative flex-shrink-0 
+                          bg-gray-50 rounded-xl shadow-lg overflow-hidden">
             <Image
               src="/ROOMIES.jpg"
               alt="People sharing a living space"
               fill
               style={{ objectFit: 'cover' }}
-              className="rounded-xl shadow-2xl"
+              className="rounded-xl"
               sizes="(max-width: 1024px) 100vw, 50vw"
               quality={80}
             />
           </div>
 
-          <div className="text-center lg:text-left">
+          {/* ─── Text Box ─── */}
+          <div className="w-full bg-gray-50 rounded-xl shadow-lg p-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-6">About ShareSpace</h2>
             <p className="text-gray-600 mb-8 max-w-2xl text-lg leading-relaxed">
               ShareSpace is the easiest way to find a roommate or room near
-              you. Whether you're a student, or just want
-              to split rent, our smart matching engine pairs you with
-              compatible roommates and verified rooms.
+              you. Whether you’re a student, or just want to split rent,
+              our smart matching engine pairs you with compatible roommates
+              and verified rooms.
             </p>
-            <ul className="space-y-4 text-gray-600 mb-8 max-w-2xl">
+            <ul className="space-y-4 text-gray-600 max-w-2xl">
               <li className="flex items-start gap-3">
                 <span className="text-blue-400 mt-1">•</span>
                 <div>
-                  <strong className="text-gray-900">Smart Matching:</strong> Fill out a quick description, share your daily habits and interests. Get matched with
-                  someone who actually fits your lifestyle.
+                  <strong className="text-gray-900">Smart Matching:</strong> Fill out a quick description, share your daily habits and interests, and get matched with someone who actually fits your lifestyle.
                 </div>
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-blue-400 mt-1">•</span>
                 <div>
-                  <strong className="text-gray-900">Verified Listings:</strong> Every room is vetted by
-                  our team. You see accurate photos, honest descriptions, and no
-                  hidden fees.
+                  <strong className="text-gray-900">Verified Listings:</strong> Every room is vetted by our team so you see accurate photos, honest descriptions, and no hidden fees.
                 </div>
               </li>
               <li className="flex items-start gap-3">
                 <span className="text-blue-400 mt-1">•</span>
                 <div>
-                  <strong className="text-gray-900">Built‐In Chat:</strong> Message potential roommates
-                  and landlords directly in app,ask questions, schedule tours,
-                  finalize details without switching apps.
+                  <strong className="text-gray-900">Built-In Chat:</strong> Message potential roommates and landlords directly in-app, ask questions, schedule tours, and finalize details without switching apps.
                 </div>
               </li>
             </ul>
-            
           </div>
         </div>
       </section>
+
 
       {/* ===========================================================
            5) LAZY LOADED MAP SECTION
@@ -347,12 +388,14 @@ export default function HomePage() {
             className="group relative inline-flex items-center gap-3 px-12 py-5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl text-xl font-bold transition-all duration-300 shadow-2xl hover:shadow-blue-500/50 hover:-translate-y-3 overflow-hidden"
             prefetch={true}
           >
-            <Sparkles className="w-7 h-7 relative z-10 text-white group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300" aria-hidden="true" />
+          <span className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
             <span className="relative z-10 font-semibold tracking-wide text-white">Sign Up Now</span>
           </Link>
 
           <div className="mt-12 border-t border-gray-200 pt-8 text-sm flex flex-col items-center space-y-2 sm:flex-row sm:justify-between sm:space-y-0">
-            <p>© {new Date().getFullYear()} ShareSpace. All rights reserved.</p>
+            <p>
+              © {year !== null ? year : ''} ShareSpace. All rights reserved.
+            </p>
             <div className="flex space-x-4">
               <Link href="/terms" className="hover:text-blue-400 transition-colors duration-200 hover:underline">
                 Terms of Service
