@@ -11,7 +11,8 @@ export default function MapSection() {
 
   // Load Google Maps JS only when this component is rendered
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY ??'',
+    // Force a string here so TS is happy
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
     libraries: [...MAP_LIBRARIES] as Libraries,
   });
 
@@ -35,10 +36,18 @@ export default function MapSection() {
 
         <div className="mx-auto px-6 lg:px-8 h-[500px]">
           <div className="dark-card h-full flex items-center justify-center flex-col gap-4">
-            <Typography sx={{ color: 'var(--foreground-secondary)', textAlign: 'center' }}>
+            <Typography
+              sx={{ color: 'var(--foreground-secondary)', textAlign: 'center' }}
+            >
               🗺️ Map configuration needed
             </Typography>
-            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
+            <Typography
+              sx={{
+                color: 'var(--foreground-secondary)',
+                fontSize: '0.9rem',
+                textAlign: 'center',
+              }}
+            >
               Google Maps API key not found. Please check your environment configuration.
             </Typography>
           </div>
@@ -62,10 +71,18 @@ export default function MapSection() {
 
         <div className="mx-auto px-6 lg:px-8 h-[500px]">
           <div className="dark-card h-full flex items-center justify-center flex-col gap-4">
-            <Typography sx={{ color: '#ef4444', textAlign: 'center', fontWeight: 600 }}>
+            <Typography
+              sx={{ color: '#ef4444', textAlign: 'center', fontWeight: 600 }}
+            >
               ⚠️ Map Loading Error
             </Typography>
-            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem', textAlign: 'center' }}>
+            <Typography
+              sx={{
+                color: 'var(--foreground-secondary)',
+                fontSize: '0.9rem',
+                textAlign: 'center',
+              }}
+            >
               {mapError || 'Unable to load Google Maps. Please check your internet connection.'}
             </Typography>
             <Button
@@ -118,110 +135,110 @@ export default function MapSection() {
                 styles: [
                   // Dark theme map styling
                   {
-                    "featureType": "all",
-                    "elementType": "geometry",
-                    "stylers": [{"color": "#242f3e"}]
+                    featureType: 'all',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#242f3e' }],
                   },
                   {
-                    "featureType": "all",
-                    "elementType": "labels.text.stroke",
-                    "stylers": [{"lightness": -80}]
+                    featureType: 'all',
+                    elementType: 'labels.text.stroke',
+                    stylers: [{ lightness: -80 }],
                   },
                   {
-                    "featureType": "administrative",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#746855"}]
+                    featureType: 'administrative',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#746855' }],
                   },
                   {
-                    "featureType": "administrative.locality",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#d59563"}]
+                    featureType: 'administrative.locality',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#d59563' }],
                   },
                   {
-                    "featureType": "poi",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#d59563"}]
+                    featureType: 'poi',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#d59563' }],
                   },
                   {
-                    "featureType": "poi.park",
-                    "elementType": "geometry",
-                    "stylers": [{"color": "#263c3f"}]
+                    featureType: 'poi.park',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#263c3f' }],
                   },
                   {
-                    "featureType": "poi.park",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#6b9a76"}]
+                    featureType: 'poi.park',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#6b9a76' }],
                   },
                   {
-                    "featureType": "road",
-                    "elementType": "geometry.fill",
-                    "stylers": [{"color": "#2b3544"}]
+                    featureType: 'road',
+                    elementType: 'geometry.fill',
+                    stylers: [{ color: '#2b3544' }],
                   },
                   {
-                    "featureType": "road",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#9ca5b3"}]
+                    featureType: 'road',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#9ca5b3' }],
                   },
                   {
-                    "featureType": "road.arterial",
-                    "elementType": "geometry.fill",
-                    "stylers": [{"color": "#38414e"}]
+                    featureType: 'road.arterial',
+                    elementType: 'geometry.fill',
+                    stylers: [{ color: '#38414e' }],
                   },
                   {
-                    "featureType": "road.arterial",
-                    "elementType": "geometry.stroke",
-                    "stylers": [{"color": "#212a37"}]
+                    featureType: 'road.arterial',
+                    elementType: 'geometry.stroke',
+                    stylers: [{ color: '#212a37' }],
                   },
                   {
-                    "featureType": "road.highway",
-                    "elementType": "geometry.fill",
-                    "stylers": [{"color": "#746855"}]
+                    featureType: 'road.highway',
+                    elementType: 'geometry.fill',
+                    stylers: [{ color: '#746855' }],
                   },
                   {
-                    "featureType": "road.highway",
-                    "elementType": "geometry.stroke",
-                    "stylers": [{"color": "#1f2835"}]
+                    featureType: 'road.highway',
+                    elementType: 'geometry.stroke',
+                    stylers: [{ color: '#1f2835' }],
                   },
                   {
-                    "featureType": "road.highway",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#f3d19c"}]
+                    featureType: 'road.highway',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#f3d19c' }],
                   },
                   {
-                    "featureType": "road.local",
-                    "elementType": "geometry.fill",
-                    "stylers": [{"color": "#38414e"}]
+                    featureType: 'road.local',
+                    elementType: 'geometry.fill',
+                    stylers: [{ color: '#38414e' }],
                   },
                   {
-                    "featureType": "road.local",
-                    "elementType": "geometry.stroke",
-                    "stylers": [{"color": "#212a37"}]
+                    featureType: 'road.local',
+                    elementType: 'geometry.stroke',
+                    stylers: [{ color: '#212a37' }],
                   },
                   {
-                    "featureType": "transit",
-                    "elementType": "geometry",
-                    "stylers": [{"color": "#2f3948"}]
+                    featureType: 'transit',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#2f3948' }],
                   },
                   {
-                    "featureType": "transit.station",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#d59563"}]
+                    featureType: 'transit.station',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#d59563' }],
                   },
                   {
-                    "featureType": "water",
-                    "elementType": "geometry",
-                    "stylers": [{"color": "#17263c"}]
+                    featureType: 'water',
+                    elementType: 'geometry',
+                    stylers: [{ color: '#17263c' }],
                   },
                   {
-                    "featureType": "water",
-                    "elementType": "labels.text.fill",
-                    "stylers": [{"color": "#515c6d"}]
+                    featureType: 'water',
+                    elementType: 'labels.text.fill',
+                    stylers: [{ color: '#515c6d' }],
                   },
                   {
-                    "featureType": "water",
-                    "elementType": "labels.text.stroke",
-                    "stylers": [{"lightness": -20}]
-                  }
+                    featureType: 'water',
+                    elementType: 'labels.text.stroke',
+                    stylers: [{ lightness: -20 }],
+                  },
                 ],
                 disableDefaultUI: false,
                 zoomControl: true,
@@ -229,7 +246,7 @@ export default function MapSection() {
                 scaleControl: true,
                 streetViewControl: false,
                 rotateControl: false,
-                fullscreenControl: true
+                fullscreenControl: true,
               }}
             />
           </div>
@@ -237,4 +254,4 @@ export default function MapSection() {
       </div>
     </section>
   );
-} 
+}
