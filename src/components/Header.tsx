@@ -82,7 +82,7 @@ export default function Header() {
             }}
           >
             <Image
-              src="/topleft.jpeg"
+              src="/logo-transparent.png"
               alt="ShareSpace Logo"
               width={60}
               height={60}

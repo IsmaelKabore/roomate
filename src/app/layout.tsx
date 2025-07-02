@@ -23,11 +23,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="icon" href="/public/logo-transparent.png" type="image/png" />
       </head>
       <body className={inter.className}>
         <ThemeProvider>
-          <ClientHeader />
-          <main>{children}</main>
+          <ClientOnly>
+            <ClientHeader />
+          </ClientOnly>
+          <main>
+            {children}
+          </main>
         </ThemeProvider>
       </body>
     </html>
