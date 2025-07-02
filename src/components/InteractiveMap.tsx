@@ -11,6 +11,9 @@ interface InteractiveMapProps {
 }
 
 export default function InteractiveMap({ lat, lng }: InteractiveMapProps) {
+  if (!GOOGLE_MAPS_API_KEY) {
+    throw new Error('Google Maps API key is missing');
+  }
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
   });

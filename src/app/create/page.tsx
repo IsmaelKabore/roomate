@@ -89,7 +89,7 @@ export default function CreatePostPage() {
 
   // Google Maps Autocomplete
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY ?? '',
     libraries: MAP_LIBRARIES as any,
   })
   const autoRef = useRef<google.maps.places.Autocomplete | null>(null)
