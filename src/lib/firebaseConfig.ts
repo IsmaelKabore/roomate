@@ -5,31 +5,50 @@ import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 import { getMessaging, isSupported as messagingIsSupported } from "firebase/messaging"
 
-// 1) Export the raw config object for server‐side routes to import
-export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: "roomate-64dcb.firebaseapp.com",
-  projectId: "roomate-64dcb",
-  storageBucket: "roomate-64dcb.firebasestorage.app",
-  messagingSenderId: "181272139051",
-  appId: "1:181272139051:web:9e5ae6c17d8b494302616e",
+// Make sure you’ve set these in your .env.local (and git-ignored)
+const {
+  NEXT_PUBLIC_FIREBASE_API_KEY,
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  NEXT_PUBLIC_FIREBASE_APP_ID,
+} = process.env
+
+// Fail fast if any are missing
+if (
+  !NEXT_PUBLIC_FIREBASE_API_KEY ||
+  !NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+  !NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+  !NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+  !NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
+  !NEXT_PUBLIC_FIREBASE_APP_ID
+) {
+  throw new Error(
+    "Missing one of the NEXT_PUBLIC_FIREBASE_* env vars for firebaseConfig"
+  )
 }
 
-// 2) Initialize Firebase App once (for client usage if needed)
+export const firebaseConfig = {
+  apiKey:            NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain:        NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId:         NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket:     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId:             NEXT_PUBLIC_FIREBASE_APP_ID,
+}
+
+// Initialize Firebase App once (for client usage)
 const app = initializeApp(firebaseConfig)
 
-// 3) Export Auth and Firestore for any client‐side or server‐side code
+// Export Auth and Firestore for use in your app
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+export const db   = getFirestore(app)
 
-// 4) Optionally export Messaging if supported (client only)
+// Optionally export Messaging if supported (client only)
 export let messaging: ReturnType<typeof getMessaging> | null = null
 if (typeof window !== "undefined") {
   messagingIsSupported().then((supported) => {
-    if (supported) {
-      messaging = getMessaging(app)
-    } else {
-      messaging = null
-    }
+    messaging = supported ? getMessaging(app) : null
   })
 }

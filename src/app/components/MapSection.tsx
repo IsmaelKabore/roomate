@@ -11,7 +11,7 @@ export default function MapSection() {
 
   // Load Google Maps JS only when this component is rendered
   const { isLoaded: isMapLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
+    googleMapsApiKey: GOOGLE_MAPS_API_KEY || '',
     libraries: [...MAP_LIBRARIES] as Libraries,
   });
 
@@ -34,7 +34,7 @@ export default function MapSection() {
         </div>
 
         <div className="mx-auto px-6 lg:px-8 h-[500px]">
-          <div className="dark-card h-full flex items-center justify-center flex-col gap-4">
+          <div className="light-card h-full flex items-center justify-center flex-col gap-4">
             <Typography sx={{ color: 'var(--foreground-secondary)', textAlign: 'center' }}>
               🗺️ Map configuration needed
             </Typography>
