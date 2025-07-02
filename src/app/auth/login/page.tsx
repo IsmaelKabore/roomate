@@ -1,94 +1,99 @@
-'use client'
+// src/app/auth/login/page.tsx
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Box,
   Button,
   TextField,
   Typography,
   CircularProgress,
-} from '@mui/material'
-import Link from 'next/link'
+} from '@mui/material';
+import Link from 'next/link';
 import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-} from 'firebase/auth'
-import { FirebaseError } from 'firebase/app'
-import { auth } from '@/lib/firebaseConfig'
+} from 'firebase/auth';
+import { FirebaseError } from 'firebase/app';
+import { auth } from '@/lib/firebaseConfig';
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [checkingAuth, setCheckingAuth] = useState(true)
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Optimized auth state checking
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        router.replace('/discover')
+        router.replace('/discover');
       } else {
-        setCheckingAuth(false)
+        setCheckingAuth(false);
       }
-    })
-    return () => unsubscribe()
-  }, [router])
+    });
+    return () => unsubscribe();
+  }, [router]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setLoading(true);
+      setError('');
 
-    try {
-      const form = e.currentTarget as HTMLFormElement
-      const email = (form.elements.namedItem('email') as HTMLInputElement).value
-      const password = (form.elements.namedItem('password') as HTMLInputElement).value
+      try {
+        const form = e.currentTarget as HTMLFormElement;
+        const email = (form.elements.namedItem('email') as HTMLInputElement)
+          .value;
+        const password = (form.elements.namedItem(
+          'password'
+        ) as HTMLInputElement).value;
 
-      await signInWithEmailAndPassword(auth, email, password)
-      router.replace('/discover')
-    } catch (err: unknown) {
-      console.error(err)
-      if (err instanceof FirebaseError) {
-        setError(
-          err.code === 'auth/user-not-found'
-            ? 'No account found with that email.'
-            : err.code === 'auth/wrong-password'
-            ? 'Incorrect password.'
-            : err.message
-        )
-      } else if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError('An unexpected error occurred.')
+        await signInWithEmailAndPassword(auth, email, password);
+        router.replace('/discover');
+      } catch (err: unknown) {
+        console.error(err);
+        if (err instanceof FirebaseError) {
+          setError(
+            err.code === 'auth/user-not-found'
+              ? 'No account found with that email.'
+              : err.code === 'auth/wrong-password'
+              ? 'Incorrect password.'
+              : err.message
+          );
+        } else if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError('An unexpected error occurred.');
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false)
-    }
-  }, [router])
+    },
+    [router]
+  );
 
   const handleGoogle = useCallback(async () => {
-    setLoading(true)
-    const provider = new GoogleAuthProvider()
+    setLoading(true);
+    const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider)
-      router.replace('/discover')
+      await signInWithPopup(auth, provider);
+      router.replace('/discover');
     } catch (err: unknown) {
-      console.error(err)
+      console.error(err);
       if (err instanceof FirebaseError) {
-        setError('Google sign-in failed: ' + err.message)
+        setError('Google sign-in failed: ' + err.message);
       } else if (err instanceof Error) {
-        setError(err.message)
+        setError(err.message);
       } else {
-        setError('Google sign-in failed or was closed.')
+        setError('Google sign-in failed or was closed.');
       }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [router])
+  }, [router]);
 
-  // Show loading spinner while checking auth
   if (checkingAuth) {
     return (
       <Box
@@ -97,12 +102,12 @@ export default function LoginPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #2d3748 100%)',
+          backgroundColor: '#ffffff',
         }}
       >
         <CircularProgress sx={{ color: '#007AFF' }} />
       </Box>
-    )
+    );
   }
 
   return (
@@ -112,7 +117,7 @@ export default function LoginPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #0f1419 0%, #1a2332 50%, #2d3748 100%)',
+        backgroundColor: '#ffffff',
         p: 2,
       }}
     >
@@ -123,13 +128,11 @@ export default function LoginPage() {
           maxWidth: 420,
           p: 5,
           borderRadius: 3,
-          background: 'rgba(30, 40, 53, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-          // Removed heavy backdrop-filter for performance
+          backgroundColor: '#ffffff',
+          border: '1px solid rgba(209, 213, 219, 0.5)',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
         }}
       >
-        {/* Simplified decorative border - much more performant */}
         <Box
           sx={{
             position: 'absolute',
@@ -141,7 +144,6 @@ export default function LoginPage() {
             background: 'linear-gradient(45deg, #007AFF, transparent, #007AFF)',
             zIndex: -1,
             opacity: 0.3,
-            // Removed complex animation for performance
           }}
         />
 
@@ -150,20 +152,20 @@ export default function LoginPage() {
             <Typography
               variant="h3"
               fontWeight="bold"
-              sx={{ 
-                mb: 2, 
-                background: 'linear-gradient(135deg, #007AFF 0%, #00BFFF 100%)',
+              sx={{
+                mb: 2,
+                background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 textAlign: 'center',
-                fontSize: { xs: '2rem', md: '2.5rem' }
+                fontSize: { xs: '2rem', md: '2.5rem' },
               }}
             >
               Welcome Back
             </Typography>
             <Typography
               variant="h6"
-              sx={{ color: '#a0aec0', textAlign: 'center', fontSize: '1.1rem' }}
+              sx={{ color: '#6B7280', textAlign: 'center', fontSize: '1.1rem' }}
             >
               Sign in to your ShareSpace account
             </Typography>
@@ -180,29 +182,30 @@ export default function LoginPage() {
               autoComplete="email"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'rgba(45, 55, 72, 0.8)',
-                  color: '#ffffff',
+                  backgroundColor: 'rgba(243, 244, 246, 0.8)',
+                  color: '#111827',
                   borderRadius: '12px',
                   transition: 'border-color 0.2s ease',
                   '& fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderColor: 'rgba(156, 163, 175, 0.5)',
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(0, 122, 255, 0.5)',
+                    borderColor: '#007AFF',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#007AFF',
+                    borderColor: '#0056b3',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#a0aec0',
+                  color: '#6B7280',
                 },
                 '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#007AFF',
+                  color: '#0056b3',
                 },
-                mb: 2
+                mb: 2,
               }}
             />
+
             <TextField
               name="password"
               label="Password"
@@ -213,45 +216,47 @@ export default function LoginPage() {
               autoComplete="current-password"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'rgba(45, 55, 72, 0.8)',
-                  color: '#ffffff',
+                  backgroundColor: 'rgba(243, 244, 246, 0.8)',
+                  color: '#111827',
                   borderRadius: '12px',
                   transition: 'border-color 0.2s ease',
                   '& fieldset': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    borderColor: 'rgba(156, 163, 175, 0.5)',
                   },
                   '&:hover fieldset': {
-                    borderColor: 'rgba(0, 122, 255, 0.5)',
+                    borderColor: '#007AFF',
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: '#007AFF',
+                    borderColor: '#0056b3',
                   },
                 },
                 '& .MuiInputLabel-root': {
-                  color: '#a0aec0',
+                  color: '#6B7280',
                 },
                 '& .MuiInputLabel-root.Mui-focused': {
-                  color: '#007AFF',
+                  color: '#0056b3',
                 },
-                mb: 2
+                mb: 2,
               }}
             />
+
             {error && (
-              <Typography 
-                color="error" 
-                variant="body2" 
-                sx={{ 
-                  mt: 1, 
+              <Typography
+                color="error"
+                variant="body2"
+                sx={{
+                  mt: 1,
                   mb: 2,
                   p: 2,
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                  backgroundColor: 'rgba(254, 226, 226, 0.5)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
                 }}
               >
                 {error}
               </Typography>
             )}
+
             <Button
               type="submit"
               fullWidth
@@ -267,11 +272,11 @@ export default function LoginPage() {
                 background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
                 color: '#ffffff',
                 boxShadow: '0 4px 15px rgba(0, 122, 255, 0.3)',
-                transition: 'all 0.2s ease', // Reduced transition time
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
-                  transform: 'translateY(-1px)', // Reduced transform for performance
-                  boxShadow: '0 6px 20px rgba(0, 122, 255, 0.4)'
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 6px 20px rgba(0, 122, 255, 0.4)',
                 },
                 '&:disabled': {
                   background: 'rgba(160, 174, 192, 0.3)',
@@ -279,7 +284,7 @@ export default function LoginPage() {
                 },
               }}
             >
-              {loading ? <CircularProgress size={24} color="inherit" /> : '🚀 Log In'}
+              {loading ? <CircularProgress size={26} color="inherit" /> : 'Log In'}
             </Button>
 
             <Button
@@ -292,14 +297,17 @@ export default function LoginPage() {
                 fontSize: '1rem',
                 borderRadius: '12px',
                 textTransform: 'none',
-                backgroundColor: 'rgba(45, 55, 72, 0.8)',
-                color: '#ffffff',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: '#ffffff',
+                color: '#111827',
+                border: '1px solid rgba(209, 213, 219, 0.8)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(60, 70, 85, 0.9)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  backgroundColor: 'rgba(243, 244, 246, 1)',
+                  borderColor: '#007AFF',
+                  color: '#007AFF',
                   transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0, 122, 255, 0.2)',
                 },
                 '&:disabled': {
                   backgroundColor: 'rgba(160, 174, 192, 0.2)',
@@ -307,17 +315,19 @@ export default function LoginPage() {
                 },
               }}
             >
-              {loading ? <CircularProgress size={20} color="inherit" /> : '🔍 Continue with Google'}
+              {loading
+                ? <CircularProgress size={20} color="inherit" />
+                : 'Continue with Google'}
             </Button>
           </form>
 
           <Box sx={{ textAlign: 'center', mt: 4 }}>
-            <Typography variant="body2" sx={{ color: '#a0aec0' }}>
+            <Typography variant="body2" sx={{ color: '#6B7280' }}>
               Don't have an account?{' '}
-              <Link 
-                href="/auth/signup" 
-                style={{ 
-                  color: '#007AFF', 
+              <Link
+                href="/auth/signup"
+                style={{
+                  color: '#0056b3',
                   textDecoration: 'none',
                   fontWeight: 600,
                 }}
@@ -329,5 +339,5 @@ export default function LoginPage() {
         </Box>
       </Box>
     </Box>
-  )
+  );
 }

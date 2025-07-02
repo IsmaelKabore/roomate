@@ -7,7 +7,7 @@ import { getMessaging, isSupported as messagingIsSupported } from "firebase/mess
 
 // 1) Export the raw config object for server‐side routes to import
 export const firebaseConfig = {
-  apiKey: "AIzaSyCLa1yWGbQ2CA94N3y0OwXln_wTkFznSNI",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: "roomate-64dcb.firebaseapp.com",
   projectId: "roomate-64dcb",
   storageBucket: "roomate-64dcb.firebasestorage.app",

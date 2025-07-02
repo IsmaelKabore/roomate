@@ -321,7 +321,7 @@ async function getOpenAICompletion(prompt: string): Promise<string> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.OPENAI_API_KEY || "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"}`
+              'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
     },
     body: JSON.stringify({
       model: 'gpt-4o-mini',

@@ -2,9 +2,9 @@
 // ——— a server‐only helper (never imported from a client component) ———
 
 export async function getDeepSeekEmbedding(inputText: string): Promise<number[]> {
-  const DEEPSEEK_API_KEY = "sk-5a14ee95157640779dddd2f4959a9e32"
+  const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
   if (!DEEPSEEK_API_KEY) {
-    throw new Error('DeepSeek API key not set')
+    throw new Error('DEEPSEEK_API_KEY is not set in environment variables');
   }
 
   const payload = {

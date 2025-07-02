@@ -1,5 +1,4 @@
-// File: src/app/discover/page.tsx
-
+// src/app/discover/page.tsx
 'use client'
 
 import React, { useEffect, useState } from 'react'
@@ -23,16 +22,11 @@ export default function DiscoverRootPage() {
   const [checkingAuth, setCheckingAuth] = useState(true)
 
   useEffect(() => {
-    // Faster auth check with timeout
-    const timer = setTimeout(() => {
-      setCheckingAuth(false)
-    }, 500) // Max 500ms wait
-
+    const timer = setTimeout(() => setCheckingAuth(false), 500)
     const unsubscribe = auth.onAuthStateChanged(() => {
       setCheckingAuth(false)
       clearTimeout(timer)
     })
-    
     return () => {
       unsubscribe()
       clearTimeout(timer)
@@ -47,20 +41,17 @@ export default function DiscoverRootPage() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          background: 'var(--gradient-background)',
+          backgroundColor: '#ffffff',
         }}
       >
-        <CircularProgress sx={{ color: 'var(--primary)' }} />
+        <CircularProgress sx={{ color: '#007AFF' }} />
       </Box>
     )
   }
 
   const goToMatching = () => {
-    if (!auth.currentUser) {
-      router.push('/auth/login')
-    } else {
-      router.push('/discover/match')
-    }
+    if (!auth.currentUser) router.push('/auth/login')
+    else router.push('/discover/match')
   }
 
   return (
@@ -72,65 +63,48 @@ export default function DiscoverRootPage() {
         alignItems: 'center',
         pt: 8,
         px: 4,
-        background: 'var(--gradient-background)',
-        color: 'var(--foreground)',
+        backgroundColor: '#ffffff',
+        color: '#111827',
       }}
     >
       <div className="text-center mb-12">
         <Typography
           variant="h3"
-          sx={{ 
-            mb: 3, 
-            background: 'var(--gradient-primary)',
+          sx={{
+            mb: 3,
+            background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
-            fontWeight: 700, 
+            fontWeight: 700,
             textAlign: 'center',
-            fontSize: { xs: '2rem', md: '2.5rem' }
+            fontSize: { xs: '2rem', md: '2.5rem' },
           }}
         >
           Welcome to Discover
         </Typography>
 
-        {/* "See My Matches" at top - Using consistent button styling */}
         <Button
           variant="contained"
           onClick={goToMatching}
-          className="btn-primary"
           sx={{
             fontSize: '1.1rem',
             textTransform: 'none',
             borderRadius: '12px',
             padding: '12px 32px',
             mb: 4,
-            '&.btn-primary': {
-              background: 'var(--gradient-primary)',
-              boxShadow: 'var(--shadow-blue)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
-                boxShadow: 'var(--shadow-blue-hover)',
-                transform: 'translateY(-2px)'
-              }
-            }
+            background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
+            color: '#ffffff',
+            boxShadow: '0 2px 8px rgba(0, 122, 255, 0.3)',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
+              boxShadow: '0 4px 12px rgba(0, 122, 255, 0.4)',
+              transform: 'translateY(-2px)',
+            },
           }}
         >
-          ✨ See My Matches
+           See My Matches
         </Button>
-
-        <Typography
-          variant="h6"
-          sx={{
-            color: 'var(--foreground-secondary)',
-            textAlign: 'center',
-            maxWidth: 680,
-            lineHeight: 1.6,
-            fontSize: { xs: '1rem', md: '1.1rem' },
-            mx: 'auto'
-          }}
-        >
-          Find your next home or connect with like‐minded roommates—powered by a sleek,
-          futuristic interface that feels right at home with Berkeley's vibrant community.
-        </Typography>
       </div>
 
       <Box
@@ -140,130 +114,97 @@ export default function DiscoverRootPage() {
           gap: 4,
           maxWidth: 1200,
           width: '100%',
-          mb: 8
+          mb: 8,
         }}
       >
-        {/* Explore Rooms */}
-        <Card className="dark-card scale-on-hover" sx={cardSx}>
-          <CardActionArea onClick={() => router.push('/discover/rooms')}>
-            <CardContent sx={contentSx}>
-              <HomeIcon sx={iconSx} />
-              <Typography variant="h5" sx={titleSx}>
-                Explore Rooms
-              </Typography>
-              <Typography sx={textSx}>
-                Browse trusted listings around Berkeley—​butter-smooth VR tours,
-                real-time filters, and immersive neighborhood previews to help you choose your perfect space.
-              </Typography>
-              <Typography className="btn-outline" sx={buttonSx}>View Listings →</Typography>
-            </CardContent>
-          </CardActionArea>
-        </Card>
-
-        {/* Find Roommates */}
-        <Card className="dark-card scale-on-hover" sx={cardSx}>
-          <CardActionArea onClick={() => router.push('/discover/roommates')}>
-            <CardContent sx={contentSx}>
-              <PeopleIcon sx={iconSx} />
-              <Typography variant="h5" sx={titleSx}>
-                Find Roommates
-              </Typography>
-              <Typography sx={textSx}>
-                Build your profile, set lifestyle preferences, and match with compatible roommates—chat instantly to find the perfect living partner in Berkeley.
-              </Typography>
-              <Typography className="btn-outline" sx={buttonSx}>Meet Roommates →</Typography>
-            </CardContent>
-          </CardActionArea>
-        </Card>
-
-        {/* Matching */}
-        <Card className="dark-card scale-on-hover" sx={cardSx}>
-          <CardActionArea onClick={goToMatching}>
-            <CardContent sx={contentSx}>
-              <AssignmentIcon sx={iconSx} />
-              <Typography variant="h5" sx={titleSx}>
-                Matching
-              </Typography>
-              <Typography sx={textSx}>
-                Enter a few keywords or let our AI find your top 5 matches—quickly discover the best room or roommate options tailored to you.
-              </Typography>
-              <Typography className="btn-outline" sx={buttonSx}>View Matches →</Typography>
-            </CardContent>
-          </CardActionArea>
-        </Card>
+        {[{
+          Icon: HomeIcon,
+          title: 'Explore Rooms',
+          desc: 'Browse trusted listings around Berkeley? smooth VR tours, real-time filters, and immersive previews.',
+          onClick: () => router.push('/discover/rooms'),
+        },{
+          Icon: PeopleIcon,
+          title: 'Find Roommates',
+          desc: 'Build your profile, set preferences, and match with compatible roommates, chat instantly to connect.',
+          onClick: () => router.push('/discover/roommates'),
+        },{
+          Icon: AssignmentIcon,
+          title: 'Matching',
+          desc: 'Let our AI find your top matches, quickly discover the best room or roommate options tailored to you.',
+          onClick: goToMatching,
+        }].map(({ Icon, title, desc, onClick }, idx) => (
+          <Card
+            key={idx}
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: { xs: 260, md: 360 },
+              backgroundColor: '#ffffff',
+              border: '1px solid rgba(0, 0, 0, 0.05)',
+              borderRadius: '16px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 4px 12px rgba(0, 122, 255, 0.2)',
+                border: '1px solid #007AFF',
+              },
+            }}
+          >
+            <CardActionArea onClick={onClick} sx={{ flex: 1 }}>
+              <CardContent
+                sx={{
+                  textAlign: 'center',
+                  py: 6,
+                  px: 4,
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                }}
+              >
+                <Icon sx={{ fontSize: 72, color: '#007AFF', mb: 3, transition: 'all 0.2s ease' }} />
+                <Typography variant="h5" sx={{ color: '#111827', fontWeight: 700, mb: 2 }}>
+                  {title}
+                </Typography>
+                <Typography sx={{ color: '#6B7280', mb: 3, px: 2, lineHeight: 1.6, fontSize: '0.95rem' }}>
+                  {desc}
+                </Typography>
+                <Typography
+                  onClick={onClick}
+                  sx={{
+                    color: '#007AFF',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    mt: 'auto',
+                    px: 2,
+                    py: 1.5,
+                    borderRadius: '12px',
+                    backgroundColor: 'transparent',
+                    border: '2px solid #007AFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      color: '#ffffff',
+                      background: 'linear-gradient(135deg, #007AFF 0%, #0056b3 100%)',
+                      borderColor: 'transparent',
+                      transform: 'translateY(-2px)',
+                    },
+                  }}
+                >
+                  { title === 'Explore Rooms' ? 'View Listings →'
+                    : title === 'Find Roommates' ? 'Meet Roommates →'
+                    : 'View Matches →' }
+                </Typography>
+              </CardContent>
+            </CardActionArea>
+          </Card>
+        ))}
       </Box>
     </Box>
   )
 }
 
-// Optimized card styles - reduced complexity for better performance
-const cardSx = {
-  display: 'flex',
-  flexDirection: 'column',
-  minHeight: { xs: 260, md: 360 },
-  background: 'var(--background-card)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '16px',
-  boxShadow: 'var(--shadow-dark)',
-  transition: 'all 0.3s ease', // Reduced from 0.5s
-  position: 'relative',
-  overflow: 'hidden',
-  '&:hover': {
-    transform: 'translateY(-8px)', // Reduced movement for better performance
-    boxShadow: 'var(--shadow-blue-hover)',
-    border: '1px solid var(--primary)',
-  },
-}
-
-const contentSx = { 
-  textAlign: 'center', 
-  py: 6, 
-  px: 4, 
-  position: 'relative', 
-  zIndex: 1,
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center'
-}
-
-const iconSx = { 
-  fontSize: 72, 
-  color: 'var(--primary)', 
-  mb: 3, 
-  transition: 'all 0.2s ease' // Simplified transition
-}
-
-const titleSx = { 
-  color: 'var(--foreground)', 
-  fontWeight: 700, 
-  mb: 2,
-  fontSize: '1.5rem'
-}
-
-const textSx = { 
-  color: 'var(--foreground-secondary)', 
-  px: 2, 
-  mb: 3, 
-  lineHeight: 1.6,
-  fontSize: '0.95rem'
-}
-
-const buttonSx = {
-  color: 'var(--primary)',
-  fontWeight: 600,
-  fontSize: '1rem',
-  mt: 'auto',
-  padding: '10px 20px',
-  borderRadius: '12px',
-  background: 'transparent',
-  border: '2px solid transparent',
-  transition: 'all 0.2s ease', // Faster transition
-  cursor: 'pointer',
-  '&:hover': {
-    color: 'var(--foreground)',
-    background: 'var(--gradient-primary)',
-    borderColor: 'var(--primary)',
-    transform: 'translateY(-2px)',
-  }
-}
+// References:
+// layout.tsx original :contentReference[oaicite:0]{index=0}
+// discover page.tsx original :contentReference[oaicite:1]{index=1}
