@@ -1,12 +1,28 @@
 // src/components/Header.tsx
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import {
+  AppBar,
+  Toolbar,
+  Button,
+  IconButton,
+  Box,
+  Drawer,
+  List,
+  ListItemButton,
+  ListItemText,
+  Menu,
+  MenuItem,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
+import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
 import TravelExploreIcon from '@mui/icons-material/TravelExplore';
-import { useEffect, useState } from 'react';
-import { AppBar, Toolbar, Button, Box } from '@mui/material';
+import AccountCircle from '@mui/icons-material/AccountCircle';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import { auth } from '@/lib/firebaseConfig';
@@ -14,296 +30,282 @@ import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasMounted, setHasMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const menuOpen = Boolean(anchorEl);
 
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const accent = '#007AFF';
 
+  // Auth listener
   useEffect(() => {
-    setHasMounted(true);
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsub = onAuthStateChanged(auth, u => {
       setUser(u);
-      setIsLoading(false);
+      setLoading(false);
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
+  // Scroll detector
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
-    window.addEventListener('scroll', onScroll);
+    const onScroll = () => setScrolled(window.scrollY > 0);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/');
-    } catch (err) {
-      console.error(err);
-      alert('Logout failed.');
-    }
+    await signOut(auth);
+    router.push('/');
+    handleMenuClose();
   };
 
-  const textColor = '#111827';
-  const hoverBg = 'rgba(0, 122, 255, 0.1)';
-  const accentColor = '#007AFF';
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(e.currentTarget);
+  };
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  // Drawer links for mobile
+  const drawerLinks = [
+    { href: '/', label: 'Home' },
+    { href: '/discover', label: 'Discover' },
+    ...(user
+      ? [
+          { href: '/my-posts', label: 'My Posts' },
+          { href: '/messages', label: 'Inbox' },
+        ]
+      : []),
+  ];
 
   return (
-    <AppBar
-      position="sticky"
-      sx={{
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(209, 213, 219, 0.3)',
-        boxShadow: '0 2px 12px rgba(0, 0, 0, 0.05)',
-        paddingY: scrolled ? 0.5 : 1,
-        zIndex: 1000,
-        transition: 'padding 0.2s cubic-bezier(.4,0,.2,1)',
-      }}
-    >
-      <Toolbar
+    <>
+      <AppBar
+        elevation={scrolled ? 4 : 0}
         sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          minHeight: scrolled ? 48 : 64,
-          transition: 'min-height 0.2s cubic-bezier(.4,0,.2,1)',
+          position: 'fixed',
+          top: scrolled ? theme.spacing(2) : 0,
+          left: scrolled ? '50%' : 0,
+          transform: scrolled ? 'translateX(-50%)' : 'none',
+          width: scrolled ? '90%' : '100%',
+          maxWidth: scrolled ? 800 : '100%',
+          borderRadius: scrolled ? 4 : 0,
+          bgcolor: scrolled ? 'rgba(107,114,128,0.6)' : '#ffffff',
+          backdropFilter: 'blur(20px)',
+          py: scrolled ? 0.5 : 1,
+          transition: 'all 0.3s ease',
+          zIndex: theme.zIndex.appBar + 1,
         }}
       >
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              transition: 'transform 0.2s',
-              transform: scrolled ? 'scale(0.67)' : 'scale(1)',
-              borderRadius: '12px',
-              overflow: 'hidden',
-            }}
-          >
-            <Image
-              src="/logo-transparent.png"
-              alt="ShareSpace Logo"
-              width={60}
-              height={60}
-              style={{ borderRadius: '12px' }}
-              priority
-            />
-          </Box>
-        </Link>
-        {/* Home & Discover */}
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexGrow: 1 }}>
+        <Toolbar
+          sx={{
+            minHeight: scrolled ? 48 : 64,
+            justifyContent: 'space-between',
+            transition: 'min-height 0.3s ease',
+          }}
+        >
+          {/* Logo */}
           <Link href="/" style={{ textDecoration: 'none' }}>
-            <Button
+            <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                color: textColor,
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: scrolled ? '0.8rem' : '0.95rem',
-                borderRadius: '10px',
-                padding: scrolled ? '4px 8px' : '8px 14px',
-                minWidth: 0,
-                '&:hover': {
-                  backgroundColor: hoverBg,
-                  color: accentColor,
-                  transform: 'translateY(-1px)',
-                  boxShadow: `0 4px 12px ${hoverBg}`,
-                },
-                transition: 'all 0.2s ease',
+                transform: scrolled ? 'scale(0.7)' : 'scale(1)',
+                transition: 'transform 0.3s ease',
+                cursor: 'pointer',
               }}
             >
-              <HomeIcon fontSize={scrolled ? 'small' : 'medium'} />
-              {!scrolled && <Box component="span" sx={{ ml: 1 }}>Home</Box>}
-            </Button>
+              <Image
+                src="/logo-transparent.png"
+                alt="Logo"
+                width={80}
+                height={80}
+                style={{ borderRadius: 8 }}
+                priority
+              />
+            </Box>
           </Link>
-          <Link href="/discover" style={{ textDecoration: 'none' }}>
-            <Button
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                color: textColor,
-                fontWeight: 600,
-                textTransform: 'none',
-                fontSize: scrolled ? '0.8rem' : '0.95rem',
-                borderRadius: '10px',
-                padding: scrolled ? '4px 8px' : '8px 14px',
-                minWidth: 0,
-                '&:hover': {
-                  backgroundColor: hoverBg,
-                  color: accentColor,
-                  transform: 'translateY(-1px)',
-                  boxShadow: `0 4px 12px ${hoverBg}`,
-                },
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <TravelExploreIcon fontSize={scrolled ? 'small' : 'medium'} />
-              {!scrolled && <Box component="span" sx={{ ml: 1 }}>Discover</Box>}
-            </Button>
-          </Link>
-        </Box>
-        {!hasMounted || isLoading ? (
-          <Box sx={{ width: 200, height: 40 }} />
-        ) : (
-          <>
-            {user ? (
-              <>
-                <Link href="/my-posts" style={{ textDecoration: 'none' }}>
-                  <Button
-                    sx={{
-                      color: textColor,
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: scrolled ? '0.8rem' : '1rem',
-                      borderRadius: '12px',
-                      padding: scrolled ? '4px 10px' : '8px 16px',
-                      minWidth: 0,
-                      '&:hover': {
-                        backgroundColor: hoverBg,
-                        color: accentColor,
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    My Posts
-                  </Button>
-                </Link>
-                <Link href="/profile" style={{ textDecoration: 'none' }}>
-                  <Button
-                    sx={{
-                      color: textColor,
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: scrolled ? '0.8rem' : '1rem',
-                      borderRadius: '12px',
-                      padding: scrolled ? '4px 10px' : '8px 16px',
-                      minWidth: 0,
-                      '&:hover': {
-                        backgroundColor: hoverBg,
-                        color: accentColor,
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    Profile
-                  </Button>
-                </Link>
-                <Link href="/messages" style={{ textDecoration: 'none' }}>
-                  <Button
-                    sx={{
-                      color: textColor,
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: scrolled ? '0.8rem' : '1rem',
-                      borderRadius: '12px',
-                      padding: scrolled ? '4px 10px' : '8px 16px',
-                      minWidth: 0,
-                      '&:hover': {
-                        backgroundColor: hoverBg,
-                        color: accentColor,
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    Inbox
-                  </Button>
-                </Link>
+
+          {/* Desktop nav */}
+          {!isMobile && (
+            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+              {/* Home */}
+              <Link href="/" style={{ textDecoration: 'none' }}>
                 <Button
-                  onClick={handleLogout}
+                  startIcon={!scrolled ? <HomeIcon /> : undefined}
+                  size="medium"
+                  variant={scrolled ? 'contained' : 'text'}
                   sx={{
-                    color: '#DC2626',
-                    fontWeight: 600,
+                    backgroundColor: scrolled ? '#000' : 'transparent',
+                    color: scrolled ? '#fff' : '#000',
                     textTransform: 'none',
-                    fontSize: scrolled ? '0.75rem' : '0.95rem',
-                    borderRadius: '10px',
-                    padding: scrolled ? '4px 10px' : '8px 14px',
-                    minWidth: 0,
-                    position: 'relative',
-                    overflow: 'hidden',
+                    fontSize: scrolled ? '1.25rem' : '1rem',
+                    px: scrolled ? 3 : 2,
+                    py: scrolled ? 1.5 : 1,
+                    borderRadius: 2,
                     '&:hover': {
-                      backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                      color: '#B91C1C',
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)',
+                      backgroundColor: scrolled
+                        ? 'rgba(255,255,255,0.1)'
+                        : 'rgba(0,122,255,0.1)',
+                      color: scrolled ? '#fff' : accent,
                     },
-                    '&:before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: '-100%',
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, transparent, rgba(220, 38, 38, 0.1), transparent)',
-                      transition: 'left 0.5s ease',
-                    },
-                    '&:hover:before': {
-                      left: '100%',
-                    },
-                    transition: 'all 0.2s ease',
                   }}
                 >
-                  🚪 Logout
+                  Home
                 </Button>
-              </>
-            ) : (
-              <Box
-                sx={{
-                  display: 'flex',
-                  gap: 0.5,
-                  borderRadius: '14px',
-                  padding: '4px',
-                }}
-              >
+              </Link>
+
+              {/* Discover */}
+              <Link href="/discover" style={{ textDecoration: 'none' }}>
+                <Button
+                  startIcon={!scrolled ? <TravelExploreIcon /> : undefined}
+                  size="medium"
+                  variant={scrolled ? 'contained' : 'text'}
+                  sx={{
+                    backgroundColor: scrolled ? '#000' : 'transparent',
+                    color: scrolled ? '#fff' : '#000',
+                    textTransform: 'none',
+                    fontSize: scrolled ? '1.25rem' : '1rem',
+                    px: scrolled ? 3 : 2,
+                    py: scrolled ? 1.5 : 1,
+                    borderRadius: 2,
+                    '&:hover': {
+                      backgroundColor: scrolled
+                        ? 'rgba(255,255,255,0.1)'
+                        : 'rgba(0,122,255,0.1)',
+                      color: scrolled ? '#fff' : accent,
+                    },
+                  }}
+                >
+                  Discover
+                </Button>
+              </Link>
+
+              {/* If not signed in, “Sign In” button */}
+              {!user && (
                 <Link href="/auth/login" style={{ textDecoration: 'none' }}>
                   <Button
+                    size="medium"
+                    variant="contained"
                     sx={{
-                      color: textColor,
-                      fontWeight: 600,
+                      backgroundColor: scrolled ? '#fff' : accent,
+                      color: scrolled ? '#000' : '#fff',
                       textTransform: 'none',
-                      fontSize: scrolled ? '0.8rem' : '0.95rem',
-                      borderRadius: '10px',
-                      padding: scrolled ? '4px 10px' : '8px 16px',
-                      minWidth: 0,
+                      fontSize: scrolled ? '1.25rem' : '1rem',
+                      px: scrolled ? 3 : 2,
+                      py: scrolled ? 1.5 : 1,
+                      borderRadius: 2,
                       '&:hover': {
-                        backgroundColor: hoverBg,
-                        color: accentColor,
+                        backgroundColor: scrolled ? '#f0f0f0' : accent,
                       },
-                      transition: 'all 0.2s ease',
                     }}
                   >
-                    Login
+                    Sign In
                   </Button>
                 </Link>
-                <Link href="/auth/signup" style={{ textDecoration: 'none' }}>
-                  <Button
+              )}
+
+              {/* If signed in, account dropdown trigger */}
+              {user && (
+                <>
+                  <IconButton
+                    onClick={handleMenuOpen}
                     sx={{
-                      background: `linear-gradient(135deg, ${accentColor} 0%, #0056b3 100%)`,
-                      color: '#ffffff',
-                      fontWeight: 600,
-                      textTransform: 'none',
-                      fontSize: scrolled ? '0.8rem' : '0.95rem',
-                      borderRadius: '10px',
-                      padding: scrolled ? '4px 10px' : '8px 16px',
-                      minWidth: 0,
-                      boxShadow: `0 2px 8px rgba(0, 122, 255, 0.3)`,
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #0056b3 0%, #003d82 100%)',
-                        boxShadow: `0 4px 12px rgba(0, 122, 255, 0.4)`,
-                        transform: 'translateY(-1px)',
-                      },
-                      transition: 'all 0.2s ease',
+                      color: scrolled ? '#fff' : '#000',
+                      fontSize: scrolled ? '2rem' : '1.5rem',
                     }}
                   >
-                    SignUp
-                  </Button>
-                </Link>
-              </Box>
+                    <AccountCircle fontSize="inherit" />
+                  </IconButton>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={menuOpen}
+                    onClose={handleMenuClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  >
+                    <MenuItem component={Link} href="/my-posts" onClick={handleMenuClose}>
+                      My Posts
+                    </MenuItem>
+                    <MenuItem component={Link} href="/messages" onClick={handleMenuClose}>
+                      Inbox
+                    </MenuItem>
+                    <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                  </Menu>
+                </>
+              )}
+            </Box>
+          )}
+
+          {/* Mobile: only Sign In + hamburger */}
+          {isMobile && (
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Link href="/auth/login" style={{ textDecoration: 'none' }}>
+                <Button
+                  size="small"
+                  variant="contained"
+                  sx={{
+                    backgroundColor: accent,
+                    color: '#fff',
+                    textTransform: 'none',
+                    fontSize: '1rem',
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                  }}
+                >
+                  Sign In
+                </Button>
+              </Link>
+              <IconButton onClick={() => setDrawerOpen(true)}>
+                <MenuIcon sx={{ fontSize: 32, color: '#000' }} />
+              </IconButton>
+            </Box>
+          )}
+        </Toolbar>
+      </AppBar>
+
+      {/* Drawer for mobile nav */}
+      <Drawer
+        anchor="right"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+      >
+        <Box sx={{ width: 240, pt: 2 }}>
+          <List>
+            {drawerLinks.map(({ href, label }) => (
+              <ListItemButton
+                key={href}
+                component={Link}
+                href={href}
+                onClick={() => setDrawerOpen(false)}
+              >
+                <ListItemText primary={label} />
+              </ListItemButton>
+            ))}
+            {user && (
+              <>
+                <ListItemButton component={Link} href="/my-posts" onClick={() => setDrawerOpen(false)}>
+                  <ListItemText primary="My Posts" />
+                </ListItemButton>
+                <ListItemButton component={Link} href="/messages" onClick={() => setDrawerOpen(false)}>
+                  <ListItemText primary="Inbox" />
+                </ListItemButton>
+                <ListItemButton onClick={handleLogout}>
+                  <ListItemText primary="Logout" />
+                </ListItemButton>
+              </>
             )}
-          </>
-        )}
-      </Toolbar>
-    </AppBar>
+          </List>
+        </Box>
+      </Drawer>
+
+      {/* Spacer so content sits below header */}
+      <Box sx={{ height: scrolled ? 48 : 64 }} />
+    </>
   );
 }

@@ -225,6 +225,37 @@ a:hover {
   border-radius: 8px;
 }
 
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* ─── typing effect ─── */
+@keyframes typing {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+@keyframes blink-caret {
+  50% { border-color: #3B82F6; } /* blue-500 */
+}
+
+.typewriter {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid #3B82F6;
+  /* duration and steps can be tuned */
+  animation:
+    typing 1.5s steps(30, end) forwards,
+    blink-caret .75s step-end infinite;
+}
+
+
 /* Icon Button */
 .btn-icon {
   width: 44px;
@@ -424,6 +455,7 @@ a:hover {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
