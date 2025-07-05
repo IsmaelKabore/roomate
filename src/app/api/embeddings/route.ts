@@ -1,5 +1,5 @@
 // File: src/app/api/embeddings/route.ts
-
+export const runtime = 'nodejs'; 
 import { NextResponse } from "next/server";
 import { getOpenAIEmbedding } from "@/lib/openai-embed";
 
