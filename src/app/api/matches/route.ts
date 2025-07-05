@@ -1,5 +1,7 @@
 // File: src/app/api/matches/route.ts
 export const runtime = 'nodejs'; 
+console.log("🛠 Running in Node.js? process.versions.node =", process?.versions?.node);
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { fetchEnhancedMatchesV2, extractKeywordsFromDescription, fetchMatchesWithFallback } from "@/lib/enhancedMatching";

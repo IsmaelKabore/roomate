@@ -1,5 +1,7 @@
 // File: src/app/api/parsePreferences/route.ts
-export const runtime = 'nodejs'; 
+export const runtime = 'nodejs';
+console.log("🛠 parsePreferences in Node?", process?.versions?.node);
+ 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import OpenAI from "openai";
