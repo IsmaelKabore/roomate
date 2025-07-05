@@ -19,6 +19,7 @@
     "@react-google-maps/api": "^2.20.6",
     "@tsparticles/engine": "^3.8.1",
     "@tsparticles/react": "^3.0.0",
+    "@vercel/speed-insights": "^1.2.0",
     "firebase": "^11.8.1",
     "firebase-admin": "^13.4.0",
     "framer-motion": "^12.23.0",

@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'
 import ClientOnly from '@/components/ClientOnly'
 import ClientHeader from '@/components/ClientHeader'
 import ThemeProvider from '@/components/ThemeProvider'
-
+import { SpeedInsights } from "@vercel/speed-insights/next"
 const inter = Inter({ 
   subsets: ['latin'],
   display: 'swap',
