@@ -1,4 +1,3 @@
-// File: src/app/api/parsePreferences/route.ts
 export const runtime = 'nodejs';
 console.log("🛠 parsePreferences in Node?", process?.versions?.node);
  
@@ -7,7 +6,7 @@ import type { NextRequest } from "next/server";
 import OpenAI from "openai";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+// File: src/app/api/parsePreferences/route.ts
 interface ParsedPrefs {
   bedrooms: number | null;
   budgetMax: number | null;
