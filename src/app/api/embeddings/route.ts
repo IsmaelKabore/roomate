@@ -1,11 +1,12 @@
-// File: src/app/api/embeddings/route.ts
-export const runtime = 'nodejs'; 
+export const runtime = 'nodejs';
+
 import { NextResponse } from "next/server";
-import { getOpenAIEmbedding } from "@/lib/openai-embed";
+import { getOpenAIEmbedding } from "@/app/api/_server/openai-embed";
 
 export async function POST(request: Request) {
   try {
     const { text } = (await request.json()) as { text?: string };
+
     if (!text || typeof text !== "string") {
       return NextResponse.json(
         { error: "Request must include a `text` string" },
@@ -13,19 +14,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // call your helper
     const embedding = await getOpenAIEmbedding(text.trim());
 
-    // sanity‐check
     console.log("↪ embedding length:", Array.isArray(embedding) ? embedding.length : "(not an array)");
 
     return NextResponse.json({ embedding });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal Server Error";
     console.error("[/api/embeddings] error:", err);
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

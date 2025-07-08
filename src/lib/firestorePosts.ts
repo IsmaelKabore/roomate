@@ -17,7 +17,7 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from 'firebase/firestore'
-import { getDeepSeekEmbedding } from '@/lib/deepseek-server'
+import { getDeepSeekEmbedding } from '@/app/api/_server/deepseek-server'
 
 /**
  * Common fields for every post in Firestore.

@@ -1,5 +1,5 @@
 import admin from "firebase-admin";
-import { StructuredFilters, EnhancedMatch, PostWithMeta, EnhancedStructuredFilters } from "./types";
+import { StructuredFilters, EnhancedMatch, PostWithMeta, EnhancedStructuredFilters } from "@/lib/types";
 import { getOpenAIEmbedding } from "./openai-embed";
 
 // Initialize Firebase Admin if not already done

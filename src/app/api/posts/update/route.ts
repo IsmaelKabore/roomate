@@ -1,8 +1,9 @@
 // File: src/app/api/posts/update/route.ts
 import { NextResponse } from 'next/server'
 import admin from 'firebase-admin'
-import { getOpenAIEmbedding } from '@/lib/openai-embed'
-import { extractKeywordsFromDescription } from '@/lib/enhancedMatching'
+import { getOpenAIEmbedding } from '@/app/api/_server//openai-embed'
+import { extractKeywordsFromDescription } from "@/app/api/_server/enhancedMatching";
+
 
 if (!admin.apps.length) {
   admin.initializeApp({

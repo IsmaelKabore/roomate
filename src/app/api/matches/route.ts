@@ -1,10 +1,20 @@
-export const runtime = 'nodejs'; 
+export const runtime = 'nodejs';
 console.log("🛠 Running in Node.js? process.versions.node =", process?.versions?.node);
-// File: src/app/api/matches/route.ts
+
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { fetchEnhancedMatchesV2, extractKeywordsFromDescription, fetchMatchesWithFallback } from "@/lib/enhancedMatching";
-import type { StructuredFilters, EnhancedMatch, EnhancedStructuredFilters } from "@/lib/types";
+
+import {
+  fetchEnhancedMatchesV2,
+  extractKeywordsFromDescription,
+  fetchMatchesWithFallback,
+} from "@/app/api/_server/enhancedMatching";
+
+import type {
+  StructuredFilters,
+  EnhancedMatch,
+  EnhancedStructuredFilters,
+} from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as {
@@ -22,28 +32,26 @@ export async function POST(req: NextRequest) {
       furnished?: boolean;
     };
   };
+
   const { userId, searchType, description, structuredFilters, explicitFilters } = body;
 
   if (!userId || !searchType || !description || !structuredFilters) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  // Create enhanced filters with explicit filter tracking
   const enhancedFilters: EnhancedStructuredFilters = {
     ...structuredFilters,
-    _explicitFilters: explicitFilters || {}
+    _explicitFilters: explicitFilters || {},
   };
 
   try {
     console.log(`[/api/matches] Starting search for ${searchType} with user: ${userId}`);
-    
-    // Extract keywords from the user description
+
     const userKeywords = await extractKeywordsFromDescription(description.trim());
     console.log(`[/api/matches] Extracted keywords:`, userKeywords);
 
     let matches: EnhancedMatch[] = [];
 
-    // Try enhanced matching with semantic search first
     try {
       console.log(`[/api/matches] Attempting enhanced matching with explicit filters:`, explicitFilters);
       matches = await fetchEnhancedMatchesV2(
@@ -52,7 +60,7 @@ export async function POST(req: NextRequest) {
         enhancedFilters,
         searchType,
         userId,
-        10 // Get more initial results for better filtering
+        10
       );
       console.log(`[/api/matches] Enhanced matching returned ${matches.length} results`);
     } catch (enhancedError) {
@@ -60,7 +68,6 @@ export async function POST(req: NextRequest) {
       matches = [];
     }
 
-    // If enhanced matching fails or returns no results, use fallback
     if (!matches || matches.length === 0) {
       console.log(`[/api/matches] Using fallback matching...`);
       try {
@@ -79,26 +86,26 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Limit to top 5 results for UI
     const finalMatches = matches.slice(0, 5);
-    
     console.log(`[/api/matches] Returning ${finalMatches.length} matches`);
-    
+
     if (finalMatches.length === 0) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         matches: [],
-        message: "No matches found. Try adjusting your preferences or expanding your search criteria."
+        message: "No matches found. Try adjusting your preferences or expanding your search criteria.",
       });
     }
 
     return NextResponse.json({ matches: finalMatches });
-    
   } catch (err: unknown) {
     console.error("[/api/matches] Unexpected error:", err);
     const message = err instanceof Error ? err.message : undefined;
-    return NextResponse.json({ 
-      error: "Failed to find matches. Please try again.",
-      details: process.env.NODE_ENV === 'development' ? message : undefined
-    }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: "Failed to find matches. Please try again.",
+        details: process.env.NODE_ENV === "development" ? message : undefined,
+      },
+      { status: 500 }
+    );
   }
 }

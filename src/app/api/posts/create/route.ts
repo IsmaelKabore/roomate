@@ -1,8 +1,8 @@
 // File: src/app/api/posts/create/route.ts
 import { NextResponse } from 'next/server'
 import admin from 'firebase-admin'
-import { extractKeywordsFromDescription } from '@/lib/enhancedMatching'
-import { getOpenAIEmbedding } from '@/lib/openai-embed'
+import { extractKeywordsFromDescription } from '@/app/api/_server/enhancedMatching'
+import { getOpenAIEmbedding } from '@/app/api/_server/openai-embed'
 
 // Load Firebase Admin credentials from environment
 const {
