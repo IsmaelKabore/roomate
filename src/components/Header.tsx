@@ -7,7 +7,6 @@ import Image from 'next/image';
 import {
   AppBar,
   Toolbar,
-  Button,
   IconButton,
   Box,
   Drawer,
@@ -17,7 +16,8 @@ import {
   Menu,
   MenuItem,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Button
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import HomeIcon from '@mui/icons-material/Home';
@@ -30,7 +30,6 @@ import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const [scrolled, setScrolled] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -41,16 +40,13 @@ export default function Header() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const accent = '#007AFF';
 
-  // Auth listener
+  // Listen auth state
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, u => {
-      setUser(u);
-      setLoading(false);
-    });
+    const unsub = onAuthStateChanged(auth, u => setUser(u));
     return () => unsub();
   }, []);
 
-  // Scroll detector
+  // Detect scroll
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 0);
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -62,48 +58,31 @@ export default function Header() {
     router.push('/');
     handleMenuClose();
   };
-
-  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(e.currentTarget);
-  };
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  // Drawer links for mobile
-  const drawerLinks = [
-    { href: '/', label: 'Home' },
-    { href: '/discover', label: 'Discover' },
-    ...(user
-      ? [
-          { href: '/my-posts', label: 'My Posts' },
-          { href: '/messages', label: 'Inbox' },
-        ]
-      : []),
-  ];
+  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
+  const handleMenuClose = () => setAnchorEl(null);
 
   return (
     <>
       <AppBar
-        elevation={scrolled ? 4 : 0}
+        elevation={scrolled ? 2 : 0}
         sx={{
           position: 'fixed',
-          top: scrolled ? theme.spacing(2) : 0,
+          top: scrolled ? theme.spacing(1) : 0,
           left: scrolled ? '50%' : 0,
           transform: scrolled ? 'translateX(-50%)' : 'none',
-          width: scrolled ? '90%' : '100%',
-          maxWidth: scrolled ? 800 : '100%',
-          borderRadius: scrolled ? 4 : 0,
+          width: scrolled ? '95%' : '100%',
+          maxWidth: scrolled ? 600 : '100%',
+          borderRadius: scrolled ? 2 : 0,
           bgcolor: scrolled ? 'rgba(107,114,128,0.6)' : '#ffffff',
           backdropFilter: 'blur(20px)',
-          py: scrolled ? 0.5 : 1,
+          py: scrolled ? 0.5 : 0.75,
           transition: 'all 0.3s ease',
           zIndex: theme.zIndex.appBar + 1,
         }}
       >
         <Toolbar
           sx={{
-            minHeight: scrolled ? 48 : 64,
+            minHeight: scrolled ? 48 : 56,
             justifyContent: 'space-between',
             transition: 'min-height 0.3s ease',
           }}
@@ -114,17 +93,17 @@ export default function Header() {
               sx={{
                 display: 'flex',
                 alignItems: 'center',
-                transform: scrolled ? 'scale(0.7)' : 'scale(1)',
+                transform: scrolled ? 'scale(1.2)' : 'scale(1)',
                 transition: 'transform 0.3s ease',
                 cursor: 'pointer',
               }}
             >
               <Image
                 src="/logo-transparent.png"
-                alt="Logo"
-                width={80}
-                height={80}
-                style={{ borderRadius: 8 }}
+                alt="ShareSpace.ai"
+                width={64}
+                height={64}
+                style={{ borderRadius: 6 }}
                 priority
               />
             </Box>
@@ -132,27 +111,20 @@ export default function Header() {
 
           {/* Desktop nav */}
           {!isMobile && (
-            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               {/* Home */}
               <Link href="/" style={{ textDecoration: 'none' }}>
                 <Button
                   startIcon={!scrolled ? <HomeIcon /> : undefined}
-                  size="medium"
                   variant={scrolled ? 'contained' : 'text'}
                   sx={{
-                    backgroundColor: scrolled ? '#000' : 'transparent',
-                    color: scrolled ? '#fff' : '#000',
                     textTransform: 'none',
-                    fontSize: scrolled ? '1.25rem' : '1rem',
-                    px: scrolled ? 3 : 2,
-                    py: scrolled ? 1.5 : 1,
-                    borderRadius: 2,
-                    '&:hover': {
-                      backgroundColor: scrolled
-                        ? 'rgba(255,255,255,0.1)'
-                        : 'rgba(0,122,255,0.1)',
-                      color: scrolled ? '#fff' : accent,
-                    },
+                    color: scrolled ? '#ffffff' : '#000000',
+                    backgroundImage: scrolled
+                      ? 'linear-gradient(to right, #2563EB, #3B82F6)'
+                      : 'none',
+                    px: 2,
+                    py: 1,
                   }}
                 >
                   Home
@@ -163,61 +135,42 @@ export default function Header() {
               <Link href="/discover" style={{ textDecoration: 'none' }}>
                 <Button
                   startIcon={!scrolled ? <TravelExploreIcon /> : undefined}
-                  size="medium"
                   variant={scrolled ? 'contained' : 'text'}
                   sx={{
-                    backgroundColor: scrolled ? '#000' : 'transparent',
-                    color: scrolled ? '#fff' : '#000',
                     textTransform: 'none',
-                    fontSize: scrolled ? '1.25rem' : '1rem',
-                    px: scrolled ? 3 : 2,
-                    py: scrolled ? 1.5 : 1,
-                    borderRadius: 2,
-                    '&:hover': {
-                      backgroundColor: scrolled
-                        ? 'rgba(255,255,255,0.1)'
-                        : 'rgba(0,122,255,0.1)',
-                      color: scrolled ? '#fff' : accent,
-                    },
+                    color: scrolled ? '#ffffff' : '#000000',
+                    backgroundImage: scrolled
+                      ? 'linear-gradient(to right, #2563EB, #3B82F6)'
+                      : 'none',
+                    px: 2,
+                    py: 1,
                   }}
                 >
                   Discover
                 </Button>
               </Link>
 
-              {/* If not signed in, “Sign In” button */}
-              {!user && (
+              {/* Sign In / Account */}
+              {!user ? (
                 <Link href="/auth/login" style={{ textDecoration: 'none' }}>
                   <Button
-                    size="medium"
                     variant="contained"
                     sx={{
-                      backgroundColor: scrolled ? '#fff' : accent,
-                      color: scrolled ? '#000' : '#fff',
                       textTransform: 'none',
-                      fontSize: scrolled ? '1.25rem' : '1rem',
-                      px: scrolled ? 3 : 2,
-                      py: scrolled ? 1.5 : 1,
-                      borderRadius: 2,
-                      '&:hover': {
-                        backgroundColor: scrolled ? '#f0f0f0' : accent,
-                      },
+                      backgroundImage: 'linear-gradient(to right, #2563EB, #3B82F6)',
+                      color: '#fff',
+                      px: 2,
+                      py: 1,
                     }}
                   >
                     Sign In
                   </Button>
                 </Link>
-              )}
-
-              {/* If signed in, account dropdown trigger */}
-              {user && (
+              ) : (
                 <>
                   <IconButton
                     onClick={handleMenuOpen}
-                    sx={{
-                      color: scrolled ? '#fff' : '#000',
-                      fontSize: scrolled ? '2rem' : '1.5rem',
-                    }}
+                    sx={{ color: '#000000', fontSize: '1.4rem' }}
                   >
                     <AccountCircle fontSize="inherit" />
                   </IconButton>
@@ -241,71 +194,67 @@ export default function Header() {
             </Box>
           )}
 
-          {/* Mobile: only Sign In + hamburger */}
+          {/* Mobile nav */}
           {isMobile && (
-            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Link href="/auth/login" style={{ textDecoration: 'none' }}>
-                <Button
-                  size="small"
-                  variant="contained"
-                  sx={{
-                    backgroundColor: accent,
-                    color: '#fff',
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    px: 2,
-                    py: 1,
-                    borderRadius: 2,
-                  }}
-                >
-                  Sign In
-                </Button>
-              </Link>
-              <IconButton onClick={() => setDrawerOpen(true)}>
-                <MenuIcon sx={{ fontSize: 32, color: '#000' }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {/* Home & Discover icons */}
+              <IconButton component={Link} href="/" sx={{ color: '#000000' }}>
+                <HomeIcon />
               </IconButton>
+              <IconButton component={Link} href="/discover" sx={{ color: '#000000' }}>
+                <TravelExploreIcon />
+              </IconButton>
+
+              {/* If not signed-in, show Sign In button */}
+              {!user && (
+                <Link href="/auth/login" style={{ textDecoration: 'none' }}>
+                  <Button
+                    variant="contained"
+                    sx={{
+                      textTransform: 'none',
+                      backgroundColor: accent,
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                      px: 2,
+                      py: 1,
+                      borderRadius: 2,
+                    }}
+                  >
+                    Sign In
+                  </Button>
+                </Link>
+              )}
+
+              {/* If signed-in, show hamburger for remainder */}
+              {user && (
+                <IconButton onClick={() => setDrawerOpen(true)}>
+                  <MenuIcon sx={{ color: '#000000' }} />
+                </IconButton>
+              )}
             </Box>
           )}
         </Toolbar>
       </AppBar>
 
-      {/* Drawer for mobile nav */}
-      <Drawer
-        anchor="right"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-      >
+      {/* Mobile Drawer */}
+      <Drawer anchor="right" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
         <Box sx={{ width: 240, pt: 2 }}>
           <List>
-            {drawerLinks.map(({ href, label }) => (
-              <ListItemButton
-                key={href}
-                component={Link}
-                href={href}
-                onClick={() => setDrawerOpen(false)}
-              >
-                <ListItemText primary={label} />
-              </ListItemButton>
-            ))}
-            {user && (
-              <>
-                <ListItemButton component={Link} href="/my-posts" onClick={() => setDrawerOpen(false)}>
-                  <ListItemText primary="My Posts" />
-                </ListItemButton>
-                <ListItemButton component={Link} href="/messages" onClick={() => setDrawerOpen(false)}>
-                  <ListItemText primary="Inbox" />
-                </ListItemButton>
-                <ListItemButton onClick={handleLogout}>
-                  <ListItemText primary="Logout" />
-                </ListItemButton>
-              </>
-            )}
+            <ListItemButton component={Link} href="/my-posts" onClick={() => setDrawerOpen(false)}>
+              <ListItemText primary="My Posts" />
+            </ListItemButton>
+            <ListItemButton component={Link} href="/messages" onClick={() => setDrawerOpen(false)}>
+              <ListItemText primary="Inbox" />
+            </ListItemButton>
+            <ListItemButton onClick={handleLogout}>
+              <ListItemText primary="Logout" />
+            </ListItemButton>
           </List>
         </Box>
       </Drawer>
 
       {/* Spacer so content sits below header */}
-      <Box sx={{ height: scrolled ? 48 : 64 }} />
+      <Box sx={{ height: scrolled ? 48 : 56 }} />
     </>
   );
 }
