@@ -132,18 +132,19 @@ export default function MatchesPage() {
 
   if (checkingAuth || !userId) {
     return (
-      <Box 
+      <Box
         sx={{
           minHeight: '100vh',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          background: 'var(--gradient-background)',
+          background: '#ffffff',
+          color: '#000000',
         }}
       >
         <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress sx={{ color: 'var(--primary)', mb: 2 }} />
-          <Typography sx={{ color: 'var(--foreground-secondary)' }}>
+          <CircularProgress sx={{ color: '#3b82f6', mb: 2 }} />
+          <Typography sx={{ color: '#000000' }}>
             Loading intelligent matching...
           </Typography>
         </Box>
@@ -196,8 +197,8 @@ export default function MatchesPage() {
     const finalExplicitFilters = {
       budgetMin: explicitFilters.budgetMin,
       budgetMax: aiPrefs.budgetMax !== null || explicitFilters.budgetMax,
-      location: locationStatus === 'granted', // Location is explicit if granted
-      locationRadiusKm: false, // We use a default radius
+      location: locationStatus === 'granted',
+      locationRadiusKm: false,
       bedrooms: aiPrefs.bedrooms !== null || explicitFilters.bedrooms,
       bathrooms: explicitFilters.bathrooms,
       furnished: aiPrefs.furnished !== null || explicitFilters.furnished,
@@ -238,26 +239,10 @@ export default function MatchesPage() {
       alert('You must be logged in to chat.')
       return
     }
-    
-    if (!user.uid) {
-      console.error('User UID is missing:', user)
-      alert('User authentication error. Please try logging in again.')
-      return
-    }
-    
-    if (!match.userId) {
-      console.error('Match userId is missing:', match)
-      alert('Invalid match data. Please try again.')
-      return
-    }
-    
-    console.log('Creating chat room between:', user.uid, 'and', match.userId)
+
     const roomId = [user.uid, match.userId].sort().join('_')
-    console.log('Generated room ID:', roomId)
-    
     try {
       await createRoom(roomId, [user.uid, match.userId])
-      console.log('Room created successfully, navigating to:', `/messages/${roomId}`)
       router.push(`/messages/${roomId}`)
     } catch (error) {
       console.error('Error creating room:', error)
@@ -266,10 +251,10 @@ export default function MatchesPage() {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 0.8) return '#22c55e' // green
-    if (score >= 0.6) return '#eab308' // yellow
-    if (score >= 0.4) return '#f97316' // orange
-    return '#ef4444' // red
+    if (score >= 0.8) return '#22c55e'
+    if (score >= 0.6) return '#eab308'
+    if (score >= 0.4) return '#f97316'
+    return '#ef4444'
   }
 
   const getScoreLabel = (score: number) => {
@@ -287,11 +272,11 @@ export default function MatchesPage() {
   ]
 
   return (
-    <Box 
+    <Box
       sx={{
         minHeight: '100vh',
-        background: 'var(--gradient-background)',
-        color: 'var(--foreground)',
+        background: '#ffffff',
+        color: '#000000',
         py: { xs: 4, md: 6 },
         px: { xs: 2, md: 4 },
       }}
@@ -304,7 +289,7 @@ export default function MatchesPage() {
               width: 80,
               height: 80,
               borderRadius: '50%',
-              background: 'var(--gradient-primary)',
+              background: '#3b82f6',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -312,24 +297,20 @@ export default function MatchesPage() {
               mb: 3,
             }}
           >
-            <AIIcon sx={{ fontSize: 40, color: 'white' }} />
+            <AIIcon sx={{ fontSize: 40, color: '#ffffff' }} />
           </Box>
           <Typography
             variant="h3"
             sx={{
               mb: 2,
-              background: 'var(--gradient-primary)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
               fontWeight: 700,
-              fontSize: { xs: '2.5rem', md: '3rem' },
             }}
           >
             AI-Powered Matching
           </Typography>
           <Typography
             sx={{
-              color: 'var(--foreground-secondary)',
+              color: '#000000',
               fontSize: '1.1rem',
               maxWidth: '600px',
               mx: 'auto',
@@ -343,37 +324,24 @@ export default function MatchesPage() {
         {/* Progress Stepper */}
         {(isSearching || matches.length > 0) && (
           <Card
-            className="dark-card"
             sx={{
-              background: 'var(--background-card)',
+              background: '#ffffff',
               borderRadius: '16px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(0, 0, 0, 0.1)',
               mb: 4,
               p: 3,
             }}
           >
             <Stepper activeStep={activeStep} orientation="horizontal">
-              {steps.map((label, index) => (
+              {steps.map(label => (
                 <Step key={label}>
                   <StepLabel
                     sx={{
                       '& .MuiStepLabel-label': {
-                        color: 'var(--foreground-secondary)',
-                        '&.Mui-active': {
-                          color: 'var(--primary)',
-                        },
-                        '&.Mui-completed': {
-                          color: 'var(--foreground)',
-                        },
+                        color: '#000000',
                       },
                       '& .MuiStepIcon-root': {
-                        color: 'var(--background-secondary)',
-                        '&.Mui-active': {
-                          color: 'var(--primary)',
-                        },
-                        '&.Mui-completed': {
-                          color: 'var(--primary)',
-                        },
+                        color: '#000000',
                       },
                     }}
                   >
@@ -389,17 +357,16 @@ export default function MatchesPage() {
           {/* Search Form */}
           <Box sx={{ flex: matches.length > 0 ? '0 0 400px' : '1 1 100%', maxWidth: matches.length > 0 ? '400px' : '600px', mx: matches.length > 0 ? 0 : 'auto' }}>
             <Card
-              className="dark-card"
               sx={{
-                background: 'var(--background-card)',
+                background: '#ffffff',
                 borderRadius: '20px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(0, 0, 0, 0.1)',
                 p: 4,
               }}
             >
               {/* Search Type Toggle */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 4 }}>
-                <Typography sx={{ color: 'var(--foreground)', fontWeight: 600 }}>
+                <Typography sx={{ color: '#000000', fontWeight: 600 }}>
                   I'm looking for:
                 </Typography>
                 <ToggleButtonGroup
@@ -408,8 +375,8 @@ export default function MatchesPage() {
                   onChange={(_, v) => v && setSearchType(v)}
                   sx={{
                     '& .MuiToggleButton-root': {
-                      color: 'var(--foreground-secondary)',
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      color: '#000000',
+                      borderColor: 'rgba(0, 0, 0, 0.2)',
                       px: 3,
                       py: 1,
                       borderRadius: '12px',
@@ -419,24 +386,24 @@ export default function MatchesPage() {
                       alignItems: 'center',
                       gap: 1,
                       '&.Mui-selected': {
-                        backgroundColor: 'var(--primary)',
-                        color: 'white',
+                        backgroundColor: '#3b82f6',
+                        color: '#ffffff',
                         '&:hover': {
-                          backgroundColor: 'var(--primary-hover)',
+                          backgroundColor: '#2563eb',
                         }
                       },
                       '&:hover': {
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
                       }
                     }
                   }}
                 >
                   <ToggleButton value="room">
-                    <HomeIcon sx={{ mr: 1 }} />
+                    <HomeIcon sx={{ mr: 1, color: '#000000' }} />
                     A Room
                   </ToggleButton>
                   <ToggleButton value="roommate">
-                    <PersonIcon sx={{ mr: 1 }} />
+                    <PersonIcon sx={{ mr: 1, color: '#000000' }} />
                     A Roommate
                   </ToggleButton>
                 </ToggleButtonGroup>
@@ -444,11 +411,11 @@ export default function MatchesPage() {
 
               {/* Description Input */}
               <Box sx={{ mb: 4 }}>
-                <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2 }}>
+                <Typography sx={{ color: '#000000', fontWeight: 600, mb: 2 }}>
                   Describe your ideal {searchType}:
                 </Typography>
                 <TextField
-                  placeholder={searchType === 'room' 
+                  placeholder={searchType === 'room'
                     ? "e.g., Looking for a 2-bedroom furnished apartment under $1200/month near downtown, pet-friendly..."
                     : "e.g., Looking for a clean, quiet roommate who's a graduate student, non-smoker, enjoys cooking..."
                   }
@@ -459,26 +426,26 @@ export default function MatchesPage() {
                   onChange={e => setDescription(e.target.value)}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      backgroundColor: 'var(--background-secondary)',
+                      backgroundColor: '#ffffff',
                       borderRadius: '12px',
-                      color: 'var(--foreground)',
+                      color: '#000000',
                       '& fieldset': {
-                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        borderColor: 'rgba(0, 0, 0, 0.2)',
                       },
                       '&:hover fieldset': {
-                        borderColor: 'var(--primary)',
+                        borderColor: '#3b82f6',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: 'var(--primary)',
+                        borderColor: '#2563eb',
                       },
                     },
                     '& textarea::placeholder': {
-                      color: 'var(--foreground-secondary)',
-                      opacity: 1,
+                      color: '#000000',
+                      opacity: 0.6,
                     }
                   }}
                 />
-                <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mt: 1 }}>
+                <Typography sx={{ fontSize: '0.8rem', color: '#000000', mt: 1 }}>
                   💡 Be specific! Our AI will extract preferences like budget, location, and amenities.
                 </Typography>
               </Box>
@@ -486,66 +453,66 @@ export default function MatchesPage() {
               {/* Location Status */}
               <Box sx={{ mb: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <LocationIcon sx={{ color: 'var(--primary)', fontSize: 20 }} />
-                  <Typography sx={{ color: 'var(--foreground)', fontWeight: 600 }}>
+                  <LocationIcon sx={{ color: '#3b82f6', fontSize: 20 }} />
+                  <Typography sx={{ color: '#000000', fontWeight: 600 }}>
                     Location
                   </Typography>
                 </Box>
                 {locationStatus === 'loading' && (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={16} sx={{ color: 'var(--primary)' }} />
-                    <Typography sx={{ fontSize: '0.9rem', color: 'var(--foreground-secondary)' }}>
+                    <CircularProgress size={16} sx={{ color: '#3b82f6' }} />
+                    <Typography sx={{ fontSize: '0.9rem', color: '#000000' }}>
                       Getting your location...
                     </Typography>
                   </Box>
                 )}
                 {locationStatus === 'granted' && (
-                  <Typography sx={{ fontSize: '0.9rem', color: 'var(--foreground-secondary)' }}>
+                  <Typography sx={{ fontSize: '0.9rem', color: '#000000' }}>
                     ✅ Location detected - we'll find matches within 10km
                   </Typography>
                 )}
                 {locationStatus === 'denied' && (
-                  <Typography sx={{ fontSize: '0.9rem', color: '#f97316' }}>
+                  <Typography sx={{ fontSize: '0.9rem', color: '#000000' }}>
                     ⚠️ Location access denied - matches may be less accurate
                   </Typography>
                 )}
               </Box>
 
               {/* Advanced Filters Toggle */}
-              <Accordion 
-                expanded={showAdvancedFilters} 
+              <Accordion
+                expanded={showAdvancedFilters}
                 onChange={() => setShowAdvancedFilters(!showAdvancedFilters)}
                 sx={{
                   background: 'transparent',
                   boxShadow: 'none',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
                   borderRadius: '12px',
                   mb: 4,
                   '&:before': { display: 'none' },
                 }}
               >
-                <AccordionSummary 
-                  expandIcon={<ExpandMoreIcon sx={{ color: 'var(--primary)' }} />}
-                  sx={{ color: 'var(--foreground)' }}
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon sx={{ color: '#3b82f6' }} />}
+                  sx={{ color: '#000000' }}
                 >
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <FilterIcon sx={{ color: 'var(--primary)', fontSize: 20 }} />
+                    <FilterIcon sx={{ color: '#000000', fontSize: 20 }} />
                     <Typography fontWeight={600}>Advanced Filters</Typography>
-                    <Chip 
-                      label="Optional" 
-                      size="small" 
-                      sx={{ 
-                        background: 'rgba(0, 122, 255, 0.1)', 
-                        color: 'var(--primary)',
+                    <Chip
+                      label="Optional"
+                      size="small"
+                      sx={{
+                        background: 'rgba(59, 130, 246, 0.1)',
+                        color: '#000000',
                         fontSize: '0.7rem'
-                      }} 
+                      }}
                     />
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails>
                   {/* Budget slider */}
                   <Box sx={{ mb: 3 }}>
-                    <Typography sx={{ mb: 2, color: 'var(--foreground)', fontWeight: 600 }}>
+                    <Typography sx={{ mb: 2, color: '#000000', fontWeight: 600 }}>
                       Budget Range: ${budget[0].toLocaleString()} – ${budget[1].toLocaleString()}
                     </Typography>
                     <Slider
@@ -558,24 +525,24 @@ export default function MatchesPage() {
                       max={5000}
                       step={50}
                       valueLabelDisplay="auto"
-                      valueLabelFormat={(value) => `$${value.toLocaleString()}`}
+                      valueLabelFormat={value => `$${value.toLocaleString()}`}
                       sx={{
-                        color: 'var(--primary)',
+                        color: '#3b82f6',
                         '& .MuiSlider-thumb': {
-                          backgroundColor: 'var(--primary)',
-                          border: '2px solid var(--background)',
+                          backgroundColor: '#3b82f6',
+                          border: '2px solid #ffffff',
                           '&:hover': {
-                            boxShadow: '0 0 0 8px rgba(0, 122, 255, 0.16)',
+                            boxShadow: '0 0 0 8px rgba(59, 130, 246, 0.16)',
                           }
                         },
                         '& .MuiSlider-track': {
-                          backgroundColor: 'var(--primary)',
+                          backgroundColor: '#3b82f6',
                         },
                         '& .MuiSlider-rail': {
-                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.1)',
                         },
                         '& .MuiSlider-valueLabel': {
-                          backgroundColor: 'var(--primary)',
+                          backgroundColor: '#3b82f6',
                         },
                       }}
                     />
@@ -596,23 +563,23 @@ export default function MatchesPage() {
                           sx={{
                             flex: 1,
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: 'var(--background-secondary)',
+                              backgroundColor: '#ffffff',
                               borderRadius: '12px',
-                              color: 'var(--foreground)',
+                              color: '#000000',
                               '& fieldset': {
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderColor: 'rgba(0, 0, 0, 0.2)',
                               },
                               '&:hover fieldset': {
-                                borderColor: 'var(--primary)',
+                                borderColor: '#3b82f6',
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: 'var(--primary)',
+                                borderColor: '#3b82f6',
                               },
                             },
                             '& .MuiInputLabel-root': {
-                              color: 'var(--foreground-secondary)',
+                              color: '#000000',
                               '&.Mui-focused': {
-                                color: 'var(--primary)',
+                                color: '#3b82f6',
                               }
                             }
                           }}
@@ -632,23 +599,23 @@ export default function MatchesPage() {
                           sx={{
                             flex: 1,
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: 'var(--background-secondary)',
+                              backgroundColor: '#ffffff',
                               borderRadius: '12px',
-                              color: 'var(--foreground)',
+                              color: '#000000',
                               '& fieldset': {
-                                borderColor: 'rgba(255, 255, 255, 0.2)',
+                                borderColor: 'rgba(0, 0, 0, 0.2)',
                               },
                               '&:hover fieldset': {
-                                borderColor: 'var(--primary)',
+                                borderColor: '#3b82f6',
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: 'var(--primary)',
+                                borderColor: '#3b82f6',
                               },
                             },
                             '& .MuiInputLabel-root': {
-                              color: 'var(--foreground-secondary)',
+                              color: '#000000',
                               '&.Mui-focused': {
-                                color: 'var(--primary)',
+                                color: '#3b82f6',
                               }
                             }
                           }}
@@ -667,15 +634,15 @@ export default function MatchesPage() {
                               setExplicitFilters(prev => ({ ...prev, furnished: true }))
                             }}
                             sx={{
-                              color: 'var(--foreground-secondary)',
+                              color: '#000000',
                               '&.Mui-checked': {
-                                color: 'var(--primary)',
+                                color: '#3b82f6',
                               }
                             }}
                           />
                         }
                         label="Furnished"
-                        sx={{ color: 'var(--foreground)' }}
+                        sx={{ color: '#000000' }}
                       />
                     </>
                   )}
@@ -684,40 +651,40 @@ export default function MatchesPage() {
 
               {/* AI Preferences Display */}
               {aiPreferences && (
-                <Alert 
-                  severity="info" 
-                  icon={<AIIcon />}
-                  sx={{ 
-                    mb: 4, 
+                <Alert
+                  severity="info"
+                  icon={<AIIcon sx={{ color: '#3b82f6' }} />}
+                  sx={{
+                    mb: 4,
                     borderRadius: '12px',
-                    background: 'rgba(0, 122, 255, 0.1)',
-                    border: '1px solid rgba(0, 122, 255, 0.2)',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
                     '& .MuiAlert-message': {
-                      color: 'var(--foreground)',
+                      color: '#000000',
                     }
                   }}
                 >
                   <Typography sx={{ fontWeight: 600, mb: 1 }}>AI Detected Preferences:</Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     {aiPreferences.bedrooms && (
-                      <Chip 
+                      <Chip
                         label={`${aiPreferences.bedrooms} bedroom${aiPreferences.bedrooms > 1 ? 's' : ''}`}
                         size="small"
-                        sx={{ background: 'var(--primary)', color: 'white' }}
+                        sx={{ background: '#3b82f6', color: '#ffffff' }}
                       />
                     )}
                     {aiPreferences.budgetMax && (
-                      <Chip 
+                      <Chip
                         label={`Max $${aiPreferences.budgetMax}/month`}
                         size="small"
-                        sx={{ background: 'var(--primary)', color: 'white' }}
+                        sx={{ background: '#3b82f6', color: '#ffffff' }}
                       />
                     )}
                     {aiPreferences.furnished !== null && (
-                      <Chip 
+                      <Chip
                         label={aiPreferences.furnished ? 'Furnished' : 'Unfurnished'}
                         size="small"
-                        sx={{ background: 'var(--primary)', color: 'white' }}
+                        sx={{ background: '#3b82f6', color: '#ffffff' }}
                       />
                     )}
                   </Box>
@@ -737,17 +704,17 @@ export default function MatchesPage() {
                   fontWeight: 600,
                   textTransform: 'none',
                   borderRadius: '16px',
-                  background: 'var(--gradient-primary)',
-                  color: 'white',
-                  boxShadow: '0 8px 24px rgba(0, 122, 255, 0.3)',
+                  background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+                  color: '#ffffff',
+                  boxShadow: '0 8px 24px rgba(59, 130, 246, 0.3)',
                   '&:hover': {
-                    background: 'var(--primary-hover)',
+                    background: '#2563eb',
                     transform: 'translateY(-2px)',
-                    boxShadow: '0 12px 32px rgba(0, 122, 255, 0.4)',
+                    boxShadow: '0 12px 32px rgba(59, 130, 246, 0.4)',
                   },
                   '&:disabled': {
-                    background: 'var(--background-secondary)',
-                    color: 'var(--foreground-secondary)',
+                    background: 'rgba(0, 0, 0, 0.1)',
+                    color: '#000000',
                     boxShadow: 'none',
                     transform: 'none',
                   },
@@ -758,9 +725,13 @@ export default function MatchesPage() {
               </Button>
 
               {error && (
-                <Alert 
-                  severity="error" 
-                  sx={{ mt: 3, borderRadius: '12px' }}
+                <Alert
+                  severity="error"
+                  sx={{
+                    mt: 3,
+                    borderRadius: '12px',
+                    color: '#000000'
+                  }}
                 >
                   {error}
                 </Alert>
@@ -774,17 +745,17 @@ export default function MatchesPage() {
               {matches.length > 0 ? (
                 <>
                   <Box sx={{ mb: 3 }}>
-                    <Typography 
-                      variant="h5" 
-                      sx={{ 
-                        color: 'var(--foreground)', 
-                        fontWeight: 700, 
-                        mb: 1 
+                    <Typography
+                      variant="h5"
+                      sx={{
+                        color: '#000000',
+                        fontWeight: 700,
+                        mb: 1
                       }}
                     >
                       Your Matches ({matches.length})
                     </Typography>
-                    <Typography sx={{ color: 'var(--foreground-secondary)' }}>
+                    <Typography sx={{ color: '#000000' }}>
                       Ranked by AI compatibility score
                     </Typography>
                   </Box>
@@ -793,11 +764,10 @@ export default function MatchesPage() {
                     {matches.map((match, index) => (
                       <Card
                         key={match.id}
-                        className="dark-card scale-on-hover"
                         sx={{
-                          background: 'var(--background-card)',
+                          background: '#ffffff',
                           borderRadius: '20px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          border: '1px solid rgba(0, 0, 0, 0.1)',
                           overflow: 'hidden',
                           transition: 'all 0.3s ease',
                           position: 'relative',
@@ -810,7 +780,7 @@ export default function MatchesPage() {
                             top: 16,
                             right: 16,
                             background: getScoreColor(match.combinedScore),
-                            color: 'white',
+                            color: '#ffffff',
                             px: 2,
                             py: 0.5,
                             borderRadius: '20px',
@@ -846,18 +816,18 @@ export default function MatchesPage() {
                             <Box sx={{ flex: 1 }}>
                               <Typography
                                 variant="h6"
-                                sx={{ 
-                                  color: 'var(--foreground)', 
-                                  fontWeight: 700, 
+                                sx={{
+                                  color: '#000000',
+                                  fontWeight: 700,
                                   mb: 1,
-                                  pr: 10, // Space for badge
+                                  pr: 10,
                                 }}
                               >
                                 {match.title || `${match.type === 'room' ? 'Room' : 'Roommate'} Listing`}
                               </Typography>
                               <Typography
                                 sx={{
-                                  color: 'var(--foreground-secondary)',
+                                  color: '#000000',
                                   mb: 2,
                                   display: '-webkit-box',
                                   WebkitLineClamp: 2,
@@ -870,10 +840,10 @@ export default function MatchesPage() {
                               </Typography>
                               {match.price && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                  <MoneyIcon sx={{ color: 'var(--primary)', fontSize: 20 }} />
+                                  <MoneyIcon sx={{ color: '#3b82f6', fontSize: 20 }} />
                                   <Typography
                                     sx={{
-                                      color: 'var(--primary)',
+                                      color: '#3b82f6',
                                       fontWeight: 700,
                                       fontSize: '1.2rem',
                                     }}
@@ -884,8 +854,8 @@ export default function MatchesPage() {
                               )}
                               {match.address && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <LocationIcon sx={{ color: 'var(--foreground-secondary)', fontSize: 18 }} />
-                                  <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+                                  <LocationIcon sx={{ color: '#000000', fontSize: 18 }} />
+                                  <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
                                     {match.address.split(',').slice(0, 2).join(', ')}
                                   </Typography>
                                 </Box>
@@ -895,47 +865,47 @@ export default function MatchesPage() {
 
                           {/* Compatibility Scores */}
                           <Box sx={{ mb: 3 }}>
-                            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 2 }}>
+                            <Typography sx={{ color: '#000000', fontWeight: 600, mb: 2 }}>
                               Compatibility Analysis
                             </Typography>
                             <Box sx={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
                               <Box>
-                                <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
+                                <Typography sx={{ fontSize: '0.8rem', color: '#000000', mb: 1 }}>
                                   Overall
                                 </Typography>
-                                <Typography 
-                                  sx={{ 
-                                    fontSize: '1.5rem', 
-                                    fontWeight: 700, 
-                                    color: getScoreColor(match.combinedScore) 
+                                <Typography
+                                  sx={{
+                                    fontSize: '1.5rem',
+                                    fontWeight: 700,
+                                    color: getScoreColor(match.combinedScore)
                                   }}
                                 >
                                   {Math.round(match.combinedScore * 100)}%
                                 </Typography>
                               </Box>
                               <Box>
-                                <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
+                                <Typography sx={{ fontSize: '0.8rem', color: '#000000', mb: 1 }}>
                                   Semantic
                                 </Typography>
-                                <Typography 
-                                  sx={{ 
-                                    fontSize: '1.2rem', 
-                                    fontWeight: 600, 
-                                    color: 'var(--foreground)' 
+                                <Typography
+                                  sx={{
+                                    fontSize: '1.2rem',
+                                    fontWeight: 600,
+                                    color: '#000000'
                                   }}
                                 >
                                   {Math.round(match.semanticScore * 100)}%
                                 </Typography>
                               </Box>
                               <Box>
-                                <Typography sx={{ fontSize: '0.8rem', color: 'var(--foreground-secondary)', mb: 1 }}>
+                                <Typography sx={{ fontSize: '0.8rem', color: '#000000', mb: 1 }}>
                                   Filters
                                 </Typography>
-                                <Typography 
-                                  sx={{ 
-                                    fontSize: '1.2rem', 
-                                    fontWeight: 600, 
-                                    color: 'var(--foreground)' 
+                                <Typography
+                                  sx={{
+                                    fontSize: '1.2rem',
+                                    fontWeight: 600,
+                                    color: '#000000'
                                   }}
                                 >
                                   {Math.round(match.structuredScore * 100)}%
@@ -946,10 +916,10 @@ export default function MatchesPage() {
 
                           {/* Explanation */}
                           <Box sx={{ mb: 3 }}>
-                            <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}>
+                            <Typography sx={{ color: '#000000', fontWeight: 600, mb: 1 }}>
                               Why this is a good match:
                             </Typography>
-                            <Typography sx={{ color: 'var(--foreground-secondary)', lineHeight: 1.6 }}>
+                            <Typography sx={{ color: '#000000', lineHeight: 1.6 }}>
                               {match.explanation}
                             </Typography>
                           </Box>
@@ -960,14 +930,14 @@ export default function MatchesPage() {
                             startIcon={<ChatIcon />}
                             fullWidth
                             sx={{
-                              background: 'var(--gradient-primary)',
-                              color: 'white',
+                              background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+                              color: '#ffffff',
                               py: 1.5,
                               borderRadius: '12px',
                               textTransform: 'none',
                               fontWeight: 600,
                               '&:hover': {
-                                background: 'var(--primary-hover)',
+                                background: '#2563eb',
                                 transform: 'translateY(-1px)',
                               },
                               transition: 'all 0.2s ease',
@@ -982,34 +952,33 @@ export default function MatchesPage() {
                 </>
               ) : (
                 <Card
-                  className="dark-card"
                   sx={{
-                    background: 'var(--background-card)',
+                    background: '#ffffff',
                     borderRadius: '20px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(0, 0, 0, 0.1)',
                     p: 4,
                     textAlign: 'center',
                   }}
                 >
-                  <Typography 
-                    variant="h5" 
-                    sx={{ 
-                      color: 'var(--foreground)', 
-                      fontWeight: 700, 
-                      mb: 2 
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      color: '#000000',
+                      fontWeight: 700,
+                      mb: 2
                     }}
                   >
                     No Matches Found
                   </Typography>
-                  <Typography sx={{ color: 'var(--foreground-secondary)', mb: 3, lineHeight: 1.6 }}>
-                    We couldn't find any {searchType === 'room' ? 'rooms' : 'roommates'} that match your current criteria. 
+                  <Typography sx={{ color: '#000000', mb: 3, lineHeight: 1.6 }}>
+                    We couldn't find any {searchType === 'room' ? 'rooms' : 'roommates'} that match your current criteria.
                     Try adjusting your preferences or expanding your search terms.
                   </Typography>
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 400, mx: 'auto' }}>
-                    <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
+                    <Typography sx={{ color: '#000000', fontSize: '0.9rem', fontWeight: 600 }}>
                       💡 Try these suggestions:
                     </Typography>
-                    <Box component="ul" sx={{ textAlign: 'left', color: 'var(--foreground-secondary)', fontSize: '0.9rem', pl: 2 }}>
+                    <Box component="ul" sx={{ textAlign: 'left', color: '#000000', fontSize: '0.9rem', pl: 2 }}>
                       <li>Increase your budget range</li>
                       <li>Be more flexible with location preferences</li>
                       <li>Try broader search terms in your description</li>
@@ -1024,14 +993,14 @@ export default function MatchesPage() {
                       }}
                       sx={{
                         mt: 2,
-                        background: 'var(--gradient-primary)',
-                        color: 'white',
+                        background: 'linear-gradient(to right, #3b82f6, #2563eb)',
+                        color: '#ffffff',
                         py: 1.5,
                         borderRadius: '12px',
                         textTransform: 'none',
                         fontWeight: 600,
                         '&:hover': {
-                          background: 'var(--primary-hover)',
+                          background: '#2563eb',
                         },
                       }}
                     >
@@ -1046,27 +1015,26 @@ export default function MatchesPage() {
 
         {/* How It Works Section */}
         <Card
-          className="dark-card"
           sx={{
-            background: 'var(--background-card)',
+            background: '#ffffff',
             borderRadius: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(0, 0, 0, 0.1)',
             mt: 6,
             p: 4,
           }}
         >
-          <Typography 
-            variant="h5" 
-            sx={{ 
-              color: 'var(--foreground)', 
-              fontWeight: 700, 
+          <Typography
+            variant="h5"
+            sx={{
+              color: '#000000',
+              fontWeight: 700,
               mb: 3,
               display: 'flex',
               alignItems: 'center',
               gap: 1,
             }}
           >
-            <InfoIcon sx={{ color: 'var(--primary)' }} />
+            <InfoIcon sx={{ color: '#3b82f6' }} />
             How Our AI Matching Works
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
@@ -1076,7 +1044,7 @@ export default function MatchesPage() {
                   width: 60,
                   height: 60,
                   borderRadius: '50%',
-                  background: 'rgba(0, 122, 255, 0.1)',
+                  background: 'rgba(59, 130, 246, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1084,12 +1052,12 @@ export default function MatchesPage() {
                   mb: 2,
                 }}
               >
-                <AIIcon sx={{ color: 'var(--primary)', fontSize: 28 }} />
+                <AIIcon sx={{ color: '#3b82f6', fontSize: 28 }} />
               </Box>
-              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}>
+              <Typography sx={{ color: '#000000', fontWeight: 600, mb: 1 }}>
                 AI Preference Extraction
               </Typography>
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+              <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
                 Our AI analyzes your description to extract specific preferences like budget, location, and amenities.
               </Typography>
             </Box>
@@ -1099,7 +1067,7 @@ export default function MatchesPage() {
                   width: 60,
                   height: 60,
                   borderRadius: '50%',
-                  background: 'rgba(0, 122, 255, 0.1)',
+                  background: 'rgba(59, 130, 246, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1107,12 +1075,12 @@ export default function MatchesPage() {
                   mb: 2,
                 }}
               >
-                <SearchIcon sx={{ color: 'var(--primary)', fontSize: 28 }} />
+                <SearchIcon sx={{ color: '#3b82f6', fontSize: 28 }} />
               </Box>
-              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}>
+              <Typography sx={{ color: '#000000', fontWeight: 600, mb: 1 }}>
                 Semantic Similarity
               </Typography>
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+              <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
                 We compare your description with listing content using advanced language understanding.
               </Typography>
             </Box>
@@ -1122,7 +1090,7 @@ export default function MatchesPage() {
                   width: 60,
                   height: 60,
                   borderRadius: '50%',
-                  background: 'rgba(0, 122, 255, 0.1)',
+                  background: 'rgba(59, 130, 246, 0.1)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1130,12 +1098,12 @@ export default function MatchesPage() {
                   mb: 2,
                 }}
               >
-                <StarIcon sx={{ color: 'var(--primary)', fontSize: 28 }} />
+                <StarIcon sx={{ color: '#3b82f6', fontSize: 28 }} />
               </Box>
-              <Typography sx={{ color: 'var(--foreground)', fontWeight: 600, mb: 1 }}>
+              <Typography sx={{ color: '#000000', fontWeight: 600, mb: 1 }}>
                 Smart Ranking
               </Typography>
-              <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+              <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
                 Results are ranked by a combination of filter matching, semantic similarity, and location proximity.
               </Typography>
             </Box>
@@ -1143,23 +1111,23 @@ export default function MatchesPage() {
         </Card>
 
         {/* Matching Logic Location Info */}
-        <Alert 
-          severity="info" 
-          icon={<InfoIcon />}
-          sx={{ 
-            mt: 4, 
+        <Alert
+          severity="info"
+          icon={<InfoIcon sx={{ color: '#3b82f6' }} />}
+          sx={{
+            mt: 4,
             borderRadius: '12px',
-            background: 'rgba(0, 122, 255, 0.1)',
-            border: '1px solid rgba(0, 122, 255, 0.2)',
+            background: 'rgba(59, 130, 246, 0.1)',
+            border: '1px solid rgba(59, 130, 246, 0.2)',
           }}
         >
-          <Typography sx={{ fontWeight: 600, mb: 1 }}>
+          <Typography sx={{ fontWeight: 600, mb: 1, color: '#000000' }}>
             🔧 For Developers: Matching Logic Location
           </Typography>
-          <Typography sx={{ fontSize: '0.9rem', mb: 1 }}>
+          <Typography sx={{ fontSize: '0.9rem', mb: 1, color: '#000000' }}>
             The AI matching system consists of several components:
           </Typography>
-          <Box component="ul" sx={{ fontSize: '0.9rem', pl: 2, mb: 0 }}>
+          <Box component="ul" sx={{ fontSize: '0.9rem', pl: 2, mb: 0, color: '#000000' }}>
             <li><code>/api/parsePreferences/route.ts</code> - Extracts preferences from natural language</li>
             <li><code>/api/matches/route.ts</code> - Main matching API endpoint</li>
             <li><code>/lib/matching.ts</code> - Core matching algorithm with semantic similarity</li>

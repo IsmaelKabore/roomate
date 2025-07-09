@@ -14,7 +14,13 @@ import {
   Pagination,
   IconButton,
 } from '@mui/material'
-import { ArrowBackIos, ArrowForwardIos, Chat as ChatIcon, Favorite, FavoriteBorder } from '@mui/icons-material'
+import {
+  ArrowBackIos,
+  ArrowForwardIos,
+  Chat as ChatIcon,
+  Favorite,
+  FavoriteBorder,
+} from '@mui/icons-material'
 import { useRouter } from 'next/navigation'
 import { getRoommatePosts } from '@/lib/firestorePosts'
 import { fetchUserProfile } from '@/lib/firestoreProfile'
@@ -33,7 +39,7 @@ type RoommatePost = {
     name?: string
     profilePicture?: string
     traits?: string[]
-  }
+  } | null
 }
 
 // Memoized square carousel component for better performance
@@ -48,7 +54,7 @@ const SquareCarousel = React.memo(({ images }: { images: string[] }) => {
         sx={{
           width: '100%',
           aspectRatio: '1/1',
-          backgroundColor: 'var(--background-secondary)',
+          backgroundColor: '#ffffff',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -56,22 +62,24 @@ const SquareCarousel = React.memo(({ images }: { images: string[] }) => {
           position: 'relative',
         }}
       >
-        <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>No Image</Typography>
+        <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>No Image</Typography>
       </Box>
     )
   }
 
   return (
-    <Box sx={{ 
-      position: 'relative', 
-      width: '100%',
-      aspectRatio: '1/1',
-      overflow: 'hidden', 
-      borderRadius: '16px 16px 0 0',
-      '&:hover .carousel-controls': {
-        opacity: 1,
-      }
-    }}>
+    <Box
+      sx={{
+        position: 'relative',
+        width: '100%',
+        aspectRatio: '1/1',
+        overflow: 'hidden',
+        borderRadius: '16px 16px 0 0',
+        '&:hover .carousel-controls': {
+          opacity: 1,
+        },
+      }}
+    >
       <Box
         component="img"
         src={images[current]}
@@ -84,7 +92,7 @@ const SquareCarousel = React.memo(({ images }: { images: string[] }) => {
         }}
         loading="lazy"
       />
-      
+
       {/* Image indicators */}
       {images.length > 1 && (
         <Box
@@ -106,19 +114,19 @@ const SquareCarousel = React.memo(({ images }: { images: string[] }) => {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: idx === current ? '#ffffff' : 'rgba(255, 255, 255, 0.5)',
+                backgroundColor: idx === current ? '#000000' : 'rgba(0, 0, 0, 0.3)',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: '#ffffff',
+                  backgroundColor: '#000000',
                   transform: 'scale(1.2)',
-                }
+                },
               }}
             />
           ))}
         </Box>
       )}
-      
+
       {images.length > 1 && (
         <>
           <IconButton
@@ -135,7 +143,7 @@ const SquareCarousel = React.memo(({ images }: { images: string[] }) => {
               height: 36,
               opacity: 0,
               transition: 'all 0.2s ease',
-              '&:hover': { 
+              '&:hover': {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 transform: 'translateY(-50%) scale(1.1)',
               },
@@ -157,7 +165,7 @@ const SquareCarousel = React.memo(({ images }: { images: string[] }) => {
               height: 36,
               opacity: 0,
               transition: 'all 0.2s ease',
-              '&:hover': { 
+              '&:hover': {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 transform: 'translateY(-50%) scale(1.1)',
               },
@@ -179,20 +187,16 @@ export default function RoommatesPage() {
   const [profilesLoading, setProfilesLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
-  const itemsPerPage = 12 // Increased for grid layout
+  const itemsPerPage = 12
   const router = useRouter()
 
   useEffect(() => {
     const loadPosts = async () => {
       try {
         const raw: RoommatePost[] = await getRoommatePosts()
-        
-        // Sort by createdAt descending so newest appear first
         raw.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis())
         setPosts(raw)
         setLoading(false)
-
-        // Load profiles in background after initial render
         loadProfiles(raw)
       } catch (error) {
         console.error('Error loading roommate posts:', error)
@@ -203,43 +207,26 @@ export default function RoommatesPage() {
     loadPosts()
   }, [])
 
-  // Separate function to load profiles asynchronously
-  const loadProfiles = async (postsData: RoommatePost[]): Promise<void> => {
+  const loadProfiles = async (postsData: RoommatePost[]) => {
     setProfilesLoading(true)
     try {
-      // Load profiles in batches to avoid overwhelming the system
       const batchSize = 5
-      const batches: RoommatePost[][] = []
       for (let i = 0; i < postsData.length; i += batchSize) {
-        batches.push(postsData.slice(i, i + batchSize))
-      }
-
-      for (const batch of batches) {
+        const batch = postsData.slice(i, i + batchSize)
         const enrichedBatch = await Promise.all(
           batch.map(async (p) => {
-            let profileData: undefined | {
-              name?: string
-              profilePicture?: string
-              traits?: string[]
-            } = undefined
-
+            let profileData: { name?: string; profilePicture?: string; traits?: string[] } | null = null
             try {
-              const fetchedProfile = await fetchUserProfile(p.userId)
-              profileData = fetchedProfile ? fetchedProfile : undefined
+              const fetched = await fetchUserProfile(p.userId)
+              profileData = fetched
             } catch {
-              // ignore if no profile
+              // ignore
             }
-
             return { ...p, profile: profileData }
           })
         )
-
-        // Update posts with the enriched batch
-        setPosts(prevPosts => 
-          prevPosts.map(post => {
-            const enriched = enrichedBatch.find(er => er.id === post.id)
-            return enriched ? enriched : post
-          })
+        setPosts((prev) =>
+          prev.map((post) => enrichedBatch.find((e) => e.id === post.id) || post)
         )
       }
     } catch (error) {
@@ -255,78 +242,45 @@ export default function RoommatesPage() {
       alert('You must be logged in to chat.')
       return
     }
-    
-    if (!user.uid) {
-      console.error('User UID is missing:', user)
-      alert('User authentication error. Please try logging in again.')
-      return
-    }
-    
-    if (!post.userId) {
-      console.error('Post userId is missing:', post)
-      alert('Invalid post data. Please try again.')
-      return
-    }
-    
-    console.log('Creating chat room between:', user.uid, 'and', post.userId)
     const roomId = [user.uid, post.userId].sort().join('_')
-    console.log('Generated room ID:', roomId)
-    
     createRoom(roomId, [user.uid, post.userId])
-      .then(() => {
-        console.log('Room created successfully, navigating to:', `/messages/${roomId}`)
-        router.push(`/messages/${roomId}`)
-      })
-      .catch((error) => {
-        console.error('Error creating room:', error)
-        alert('Failed to create chat room. Please try again.')
-      })
+      .then(() => router.push(`/messages/${roomId}`))
+      .catch(() => alert('Failed to create chat room.'))
   }
 
   const toggleFavorite = (postId: string) => {
-    setFavorites(prev => {
-      const newFavorites = new Set(prev)
-      if (newFavorites.has(postId)) {
-        newFavorites.delete(postId)
-      } else {
-        newFavorites.add(postId)
-      }
-      return newFavorites
+    setFavorites((prev) => {
+      const next = new Set(prev)
+      prev.has(postId) ? next.delete(postId) : next.add(postId)
+      return next
     })
   }
 
   if (loading) {
     return (
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           minHeight: '100vh',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          background: 'var(--gradient-background)',
+          background: '#ffffff',
         }}
       >
-        <CircularProgress sx={{ color: 'var(--primary)' }} />
+        <CircularProgress sx={{ color: '#000000' }} />
       </Box>
     )
   }
 
-  // Calculate pagination
   const totalPages = Math.ceil(posts.length / itemsPerPage)
-  const startIdx = (page - 1) * itemsPerPage
-  const paginatedPosts = posts.slice(startIdx, startIdx + itemsPerPage)
-
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setPage(value)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const paginatedPosts = posts.slice((page - 1) * itemsPerPage, page * itemsPerPage)
 
   return (
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'var(--gradient-background)',
-        color: 'var(--foreground)',
+        background: '#ffffff',
+        color: '#000000',
         p: { xs: 2, md: 4 },
       }}
     >
@@ -335,9 +289,7 @@ export default function RoommatesPage() {
           variant="h3"
           sx={{
             mb: 2,
-            background: 'var(--gradient-primary)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+            color: '#000000',
             fontWeight: 700,
             fontSize: { xs: '2.5rem', md: '3.5rem' },
           }}
@@ -346,7 +298,7 @@ export default function RoommatesPage() {
         </Typography>
         <Typography
           sx={{
-            color: 'var(--foreground-secondary)',
+            color: '#000000',
             fontSize: '1.2rem',
             maxWidth: '600px',
             mx: 'auto',
@@ -358,7 +310,7 @@ export default function RoommatesPage() {
         </Typography>
         <Typography
           sx={{
-            color: 'var(--foreground-tertiary)',
+            color: '#000000',
             fontSize: '1rem',
             maxWidth: '500px',
             mx: 'auto',
@@ -371,39 +323,38 @@ export default function RoommatesPage() {
 
       {profilesLoading && (
         <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
-          <CircularProgress size={16} sx={{ color: 'var(--primary)' }} />
-          <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '0.9rem' }}>
+          <CircularProgress size={16} sx={{ color: '#000000' }} />
+          <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
             Loading profiles...
           </Typography>
         </Box>
       )}
 
       <Box sx={{ maxWidth: 1400, mx: 'auto' }}>
-        {posts.length === 0 ? (
+        {paginatedPosts.length === 0 ? (
           <Box
             sx={{
               textAlign: 'center',
               py: 8,
-              background: 'var(--background-card)',
+              background: '#ffffff',
               borderRadius: '16px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(0,0,0,0.1)',
             }}
           >
-            <Typography sx={{ color: 'var(--foreground-secondary)', fontSize: '1.1rem' }}>
+            <Typography sx={{ color: '#000000', fontSize: '1.1rem' }}>
               No roommate posts found.
             </Typography>
           </Box>
         ) : (
           <>
-            {/* Square Grid Layout */}
-            <Box 
-              sx={{ 
+            <Box
+              sx={{
                 display: 'grid',
                 gridTemplateColumns: {
-                  xs: 'repeat(1, 1fr)',
-                  sm: 'repeat(2, 1fr)',
-                  md: 'repeat(3, 1fr)',
-                  lg: 'repeat(4, 1fr)',
+                  xs: 'repeat(1,1fr)',
+                  sm: 'repeat(2,1fr)',
+                  md: 'repeat(3,1fr)',
+                  lg: 'repeat(4,1fr)',
                 },
                 gap: 3,
                 mb: 4,
@@ -412,27 +363,23 @@ export default function RoommatesPage() {
               {paginatedPosts.map((post) => (
                 <Card
                   key={post.id}
-                  className="dark-card scale-on-hover"
                   sx={{
-                    background: 'var(--background-card)',
-                    borderRadius: '16px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    background: '#ffffff',
+                    borderRadius: 2,
+                    border: '1px solid rgba(0,0,0,0.1)',
                     overflow: 'hidden',
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
                     position: 'relative',
                     '&:hover': {
                       transform: 'translateY(-8px) scale(1.02)',
-                      boxShadow: '0 20px 40px rgba(0, 122, 255, 0.15)',
-                      border: '1px solid var(--primary)',
+                      boxShadow: '0 20px 40px rgba(59,130,246,0.15)',
+                      border: '1px solid #3b82f6',
                     },
                   }}
                 >
-                  {/* Square Image Section */}
                   <Box sx={{ position: 'relative' }}>
                     <SquareCarousel images={post.images} />
-                    
-                    {/* Favorite Button */}
                     <IconButton
                       onClick={(e) => {
                         e.stopPropagation()
@@ -442,12 +389,12 @@ export default function RoommatesPage() {
                         position: 'absolute',
                         top: 12,
                         right: 12,
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        color: favorites.has(post.id) ? '#ff4757' : '#ffffff',
+                        backgroundColor: 'rgba(0,0,0,0.1)',
+                        color: favorites.has(post.id) ? '#ff4757' : '#000000',
                         width: 40,
                         height: 40,
                         '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                          backgroundColor: 'rgba(0,0,0,0.2)',
                           transform: 'scale(1.1)',
                         },
                         transition: 'all 0.2s ease',
@@ -457,14 +404,12 @@ export default function RoommatesPage() {
                     </IconButton>
                   </Box>
 
-                  {/* Content Section */}
                   <Box sx={{ p: 2.5 }}>
-                    {/* Profile Header */}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                       <Avatar
                         src={post.profile?.profilePicture}
-                        sx={{ 
-                          bgcolor: 'var(--primary)',
+                        sx={{
+                          bgcolor: '#3b82f6',
                           width: 40,
                           height: 40,
                         }}
@@ -472,10 +417,10 @@ export default function RoommatesPage() {
                         {post.profile?.name?.[0] || '?'}
                       </Avatar>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography 
-                          sx={{ 
-                            color: 'var(--foreground)', 
-                            fontWeight: 600, 
+                        <Typography
+                          sx={{
+                            color: '#000000',
+                            fontWeight: 600,
                             fontSize: '1rem',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -484,21 +429,15 @@ export default function RoommatesPage() {
                         >
                           {post.profile?.name || 'Anonymous'}
                         </Typography>
-                        <Typography 
-                          sx={{ 
-                            color: 'var(--foreground-secondary)', 
-                            fontSize: '0.8rem',
-                          }}
-                        >
+                        <Typography sx={{ color: '#000000', fontSize: '0.8rem' }}>
                           {post.createdAt.toDate().toLocaleDateString()}
                         </Typography>
                       </Box>
                     </Box>
 
-                    {/* Title */}
                     <Typography
                       sx={{
-                        color: 'var(--foreground)',
+                        color: '#000000',
                         fontWeight: 600,
                         fontSize: '1.1rem',
                         mb: 1.5,
@@ -510,10 +449,9 @@ export default function RoommatesPage() {
                       {post.title}
                     </Typography>
 
-                    {/* Description */}
                     <Typography
                       sx={{
-                        color: 'var(--foreground-secondary)',
+                        color: '#000000',
                         fontSize: '0.9rem',
                         lineHeight: 1.4,
                         mb: 2,
@@ -521,13 +459,12 @@ export default function RoommatesPage() {
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
-                        minHeight: '2.8rem', // Consistent height
+                        minHeight: '2.8rem',
                       }}
                     >
                       {post.description}
                     </Typography>
 
-                    {/* Traits */}
                     {post.profile?.traits && post.profile.traits.length > 0 && (
                       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
                         {post.profile.traits.slice(0, 2).map((trait, idx) => (
@@ -537,8 +474,8 @@ export default function RoommatesPage() {
                               px: 1.5,
                               py: 0.5,
                               borderRadius: '8px',
-                              background: 'var(--background-secondary)',
-                              color: 'var(--primary)',
+                              background: '#f3f4f6',
+                              color: '#3b82f6',
                               fontSize: '0.75rem',
                               fontWeight: 500,
                             }}
@@ -552,8 +489,8 @@ export default function RoommatesPage() {
                               px: 1.5,
                               py: 0.5,
                               borderRadius: '8px',
-                              background: 'var(--background-secondary)',
-                              color: 'var(--foreground-secondary)',
+                              background: '#f3f4f6',
+                              color: '#000000',
                               fontSize: '0.75rem',
                               fontWeight: 500,
                             }}
@@ -564,7 +501,6 @@ export default function RoommatesPage() {
                       </Box>
                     )}
 
-                    {/* Action Button */}
                     <Button
                       onClick={(e) => {
                         e.stopPropagation()
@@ -572,20 +508,17 @@ export default function RoommatesPage() {
                       }}
                       startIcon={<ChatIcon />}
                       fullWidth
-                      className="btn-primary"
                       sx={{
                         textTransform: 'none',
                         borderRadius: '12px',
                         py: 1,
                         fontWeight: 600,
-                        '&.btn-primary': {
-                          background: 'var(--gradient-primary)',
-                          color: 'white',
-                          '&:hover': {
-                            background: 'linear-gradient(135deg, var(--primary-hover) 0%, #003d82 100%)',
-                            transform: 'translateY(-1px)',
-                          }
-                        }
+                        background: '#3b82f6',
+                        color: '#ffffff',
+                        '&:hover': {
+                          background: '#2563eb',
+                          transform: 'translateY(-1px)',
+                        },
                       }}
                     >
                       Start Chat
@@ -595,26 +528,28 @@ export default function RoommatesPage() {
               ))}
             </Box>
 
-            {/* Pagination */}
             {totalPages > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                 <Pagination
                   count={totalPages}
                   page={page}
-                  onChange={handlePageChange}
+                  onChange={(_, v) => {
+                    setPage(v)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   sx={{
                     '& .MuiPaginationItem-root': {
-                      color: 'var(--foreground)',
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
+                      color: '#000000',
+                      borderColor: 'rgba(0,0,0,0.1)',
                       '&:hover': {
-                        backgroundColor: 'rgba(0, 122, 255, 0.1)',
-                        borderColor: 'var(--primary)',
+                        backgroundColor: 'rgba(59,130,246,0.1)',
+                        borderColor: '#3b82f6',
                       },
                       '&.Mui-selected': {
-                        backgroundColor: 'var(--primary)',
-                        color: 'white',
+                        backgroundColor: '#3b82f6',
+                        color: '#ffffff',
                         '&:hover': {
-                          backgroundColor: 'var(--primary-hover)',
+                          backgroundColor: '#2563eb',
                         },
                       },
                     },
