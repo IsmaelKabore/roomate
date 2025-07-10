@@ -1,21 +1,32 @@
-// File: src/lib/matching.ts
+// File: src/app/api/_server/matching.ts
 
 import admin from "firebase-admin";
-import { StructuredFilters, EnhancedMatch, PostWithMeta } from "./types";
+import type { StructuredFilters, EnhancedMatch, PostWithMeta } from "@/lib/types";
 
-// -- Firebase Admin init (one-time) --
+// Validate and grab environment variables
+const {
+  FIREBASE_PROJECT_ID,
+  FIREBASE_CLIENT_EMAIL,
+  FIREBASE_PRIVATE_KEY,
+} = process.env;
+
+if (!FIREBASE_PROJECT_ID || !FIREBASE_CLIENT_EMAIL || !FIREBASE_PRIVATE_KEY) {
+  throw new Error(
+    "Missing one of FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY"
+  );
+}
+
+// Initialize Firebase Admin (one-time)
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
-      projectId: "roomate-64dcb",
-      clientEmail: "firebase-adminsdk-hj7fh@roomate-64dcb.iam.gserviceaccount.com",
-      privateKey: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC2mZPeEZjNgLjQ\nZYbHNZYmYpWDGKJ9N8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\nQ8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5Q8Xo2mJ5\n-----END PRIVATE KEY-----\n",
+      projectId: FIREBASE_PROJECT_ID,
+      clientEmail: FIREBASE_CLIENT_EMAIL,
+      privateKey: FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n"),
     }),
   });
 }
 const db = admin.firestore();
-
-// -- Helpers --
 
 /** Safe cosine similarity, returns 0 on any error or mismatch */
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -31,9 +42,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0, na = 0, nb = 0;
   for (let i = 0; i < a.length; i++) {
     const ai = Number(a[i]), bi = Number(b[i]);
-    if (Number.isNaN(ai) || Number.isNaN(bi)) {
-      return 0;
-    }
+    if (Number.isNaN(ai) || Number.isNaN(bi)) return 0;
     dot += ai * bi;
     na += ai * ai;
     nb += bi * bi;
@@ -42,11 +51,22 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 
-/** Haversine distance in kilometers */
+/**
+ * Haversine distance in kilometers, returns Infinity if either point is missing
+ */
 function geoDistanceKm(
-  a: { lat: number; lng: number },
-  b: { lat: number; lng: number }
+  a?: { lat: number; lng: number },
+  b?: { lat: number; lng: number }
 ): number {
+  if (
+    !a || !b ||
+    typeof a.lat !== 'number' ||
+    typeof a.lng !== 'number' ||
+    typeof b.lat !== 'number' ||
+    typeof b.lng !== 'number'
+  ) {
+    return Infinity;
+  }
   const toRad = (d: number) => (d * Math.PI) / 180;
   const R = 6371;
   const dLat = toRad(b.lat - a.lat), dLon = toRad(b.lng - a.lng);
@@ -58,14 +78,14 @@ function geoDistanceKm(
 }
 
 /**
- * Fetch & rank posts by your minimal filters + semantic similarity.
+ * Fetch & rank posts by minimal filters + semantic similarity.
  */
 export async function fetchEnhancedMatches(
   userEmbedding: number[],
   filters: StructuredFilters,
   filterType: "room" | "roommate",
   excludeUserId: string,
-  topN = 5
+  topN = 10
 ): Promise<EnhancedMatch[]> {
   const snap = await db.collection("posts").get();
   const scored: EnhancedMatch[] = [];
@@ -74,7 +94,6 @@ export async function fetchEnhancedMatches(
     const data = doc.data() as any;
     if (data.userId === excludeUserId || data.type !== filterType) continue;
 
-    // Rehydrate a typed PostWithMeta
     const post: PostWithMeta = {
       id: doc.id,
       userId: data.userId,
@@ -103,11 +122,13 @@ export async function fetchEnhancedMatches(
 
     // 2) Geo‐radius filter & score
     if (sScore > 0) {
-      const dist = geoDistanceKm(post.structured.location, filters.location);
-      if (dist > filters.locationRadiusKm) {
+      const dist = geoDistanceKm(
+        post.structured.location,
+        filters.location
+      );
+      if (dist === Infinity || dist > filters.locationRadiusKm) {
         sScore = 0;
       } else {
-        // closer = higher score
         sScore *= 1 - dist / filters.locationRadiusKm;
       }
     }
@@ -119,10 +140,10 @@ export async function fetchEnhancedMatches(
       if (post.structured.furnished !== filters.furnished) sScore *= 0.8;
     }
 
-    // ---- semantic scoring ----
+    // Semantic scoring
     const semScore = cosineSimilarity(userEmbedding, post.embedding);
 
-    // ---- combine ----
+    // Combine weighted
     const combined = semScore * 0.7 + sScore * 0.3;
 
     scored.push({
@@ -137,7 +158,6 @@ export async function fetchEnhancedMatches(
     });
   }
 
-  // Sort by highest combinedScore and return topN
   return scored
     .sort((a, b) => b.combinedScore - a.combinedScore)
     .slice(0, topN);

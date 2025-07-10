@@ -172,7 +172,7 @@ export default function MatchesPage() {
       if (p.ok) {
         const json = await p.json()
         aiPrefs = {
-          bedrooms:  typeof json.bedrooms  === 'number' ? json.bedrooms  : null,
+          bedrooms: typeof json.bedrooms === 'number' ? json.bedrooms : null,
           budgetMax: typeof json.budgetMax === 'number' ? json.budgetMax : null,
           furnished: typeof json.furnished === 'boolean' ? json.furnished : null,
         }
@@ -184,13 +184,13 @@ export default function MatchesPage() {
 
     // 2) Build your filters, merging AI + manual defaults
     const structuredFilters: StructuredFilters = {
-      budgetMin:      budget[0],
-      budgetMax:      aiPrefs.budgetMax ?? budget[1],
+      budgetMin: budget[0],
+      budgetMax: aiPrefs.budgetMax ?? budget[1],
       location,
       locationRadiusKm: 10,
-      bedrooms:       aiPrefs.bedrooms  ?? bedrooms,
-      bathrooms:      bathrooms,
-      furnished:      aiPrefs.furnished ?? furnished,
+      bedrooms: aiPrefs.bedrooms ?? bedrooms,
+      bathrooms: bathrooms,
+      furnished: aiPrefs.furnished ?? furnished,
     }
 
     // Track which filters are explicit (AI-parsed or manually set)
@@ -468,12 +468,12 @@ export default function MatchesPage() {
                 )}
                 {locationStatus === 'granted' && (
                   <Typography sx={{ fontSize: '0.9rem', color: '#000000' }}>
-                    ✅ Location detected - we'll find matches within 10km
+                    ✅ Location detected — searching within 10km
                   </Typography>
                 )}
                 {locationStatus === 'denied' && (
                   <Typography sx={{ fontSize: '0.9rem', color: '#000000' }}>
-                    ⚠️ Location access denied - matches may be less accurate
+                    ⚠️ Location access denied — results may default to broader area
                   </Typography>
                 )}
               </Box>
@@ -1012,129 +1012,6 @@ export default function MatchesPage() {
             </Box>
           )}
         </Box>
-
-        {/* How It Works Section */}
-        <Card
-          sx={{
-            background: '#ffffff',
-            borderRadius: '20px',
-            border: '1px solid rgba(0, 0, 0, 0.1)',
-            mt: 6,
-            p: 4,
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{
-              color: '#000000',
-              fontWeight: 700,
-              mb: 3,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1,
-            }}
-          >
-            <InfoIcon sx={{ color: '#3b82f6' }} />
-            How Our AI Matching Works
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-            <Box sx={{ flex: 1, textAlign: 'center' }}>
-              <Box
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mx: 'auto',
-                  mb: 2,
-                }}
-              >
-                <AIIcon sx={{ color: '#3b82f6', fontSize: 28 }} />
-              </Box>
-              <Typography sx={{ color: '#000000', fontWeight: 600, mb: 1 }}>
-                AI Preference Extraction
-              </Typography>
-              <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
-                Our AI analyzes your description to extract specific preferences like budget, location, and amenities.
-              </Typography>
-            </Box>
-            <Box sx={{ flex: 1, textAlign: 'center' }}>
-              <Box
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mx: 'auto',
-                  mb: 2,
-                }}
-              >
-                <SearchIcon sx={{ color: '#3b82f6', fontSize: 28 }} />
-              </Box>
-              <Typography sx={{ color: '#000000', fontWeight: 600, mb: 1 }}>
-                Semantic Similarity
-              </Typography>
-              <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
-                We compare your description with listing content using advanced language understanding.
-              </Typography>
-            </Box>
-            <Box sx={{ flex: 1, textAlign: 'center' }}>
-              <Box
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mx: 'auto',
-                  mb: 2,
-                }}
-              >
-                <StarIcon sx={{ color: '#3b82f6', fontSize: 28 }} />
-              </Box>
-              <Typography sx={{ color: '#000000', fontWeight: 600, mb: 1 }}>
-                Smart Ranking
-              </Typography>
-              <Typography sx={{ color: '#000000', fontSize: '0.9rem' }}>
-                Results are ranked by a combination of filter matching, semantic similarity, and location proximity.
-              </Typography>
-            </Box>
-          </Box>
-        </Card>
-
-        {/* Matching Logic Location Info */}
-        <Alert
-          severity="info"
-          icon={<InfoIcon sx={{ color: '#3b82f6' }} />}
-          sx={{
-            mt: 4,
-            borderRadius: '12px',
-            background: 'rgba(59, 130, 246, 0.1)',
-            border: '1px solid rgba(59, 130, 246, 0.2)',
-          }}
-        >
-          <Typography sx={{ fontWeight: 600, mb: 1, color: '#000000' }}>
-            🔧 For Developers: Matching Logic Location
-          </Typography>
-          <Typography sx={{ fontSize: '0.9rem', mb: 1, color: '#000000' }}>
-            The AI matching system consists of several components:
-          </Typography>
-          <Box component="ul" sx={{ fontSize: '0.9rem', pl: 2, mb: 0, color: '#000000' }}>
-            <li><code>/api/parsePreferences/route.ts</code> - Extracts preferences from natural language</li>
-            <li><code>/api/matches/route.ts</code> - Main matching API endpoint</li>
-            <li><code>/lib/matching.ts</code> - Core matching algorithm with semantic similarity</li>
-            <li><code>/lib/enhancedMatching.ts</code> - Advanced matching with detailed scoring</li>
-            <li><code>/lib/openai-embed.ts</code> - Generates embeddings for semantic comparison</li>
-          </Box>
-        </Alert>
       </Box>
     </Box>
   )

@@ -1,3 +1,5 @@
+// File: src/app/api/matches/route.ts
+
 export const runtime = 'nodejs';
 console.log("🛠 Running in Node.js? process.versions.node =", process?.versions?.node);
 
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
+  // Merge explicit filters into enhanced filters
   const enhancedFilters: EnhancedStructuredFilters = {
     ...structuredFilters,
     _explicitFilters: explicitFilters || {},
@@ -47,11 +50,13 @@ export async function POST(req: NextRequest) {
   try {
     console.log(`[/api/matches] Starting search for ${searchType} with user: ${userId}`);
 
+    // Extract keywords from user description
     const userKeywords = await extractKeywordsFromDescription(description.trim());
     console.log(`[/api/matches] Extracted keywords:`, userKeywords);
 
     let matches: EnhancedMatch[] = [];
 
+    // 1) Try enhanced matching
     try {
       console.log(`[/api/matches] Attempting enhanced matching with explicit filters:`, explicitFilters);
       matches = await fetchEnhancedMatchesV2(
@@ -64,10 +69,11 @@ export async function POST(req: NextRequest) {
       );
       console.log(`[/api/matches] Enhanced matching returned ${matches.length} results`);
     } catch (enhancedError) {
-      console.log(`[/api/matches] Enhanced matching failed:`, enhancedError);
+      console.warn(`[/api/matches] Enhanced matching failed:`, enhancedError);
       matches = [];
     }
 
+    // 2) Fallback if no matches
     if (!matches || matches.length === 0) {
       console.log(`[/api/matches] Using fallback matching...`);
       try {
@@ -86,14 +92,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Return top 5
     const finalMatches = matches.slice(0, 5);
     console.log(`[/api/matches] Returning ${finalMatches.length} matches`);
 
     if (finalMatches.length === 0) {
-      return NextResponse.json({
-        matches: [],
-        message: "No matches found. Try adjusting your preferences or expanding your search criteria.",
-      });
+      return NextResponse.json(
+        {
+          matches: [],
+          message: "No matches found. Try adjusting your preferences or expanding your search criteria.",
+        }
+      );
     }
 
     return NextResponse.json({ matches: finalMatches });
